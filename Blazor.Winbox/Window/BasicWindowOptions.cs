@@ -2,6 +2,7 @@
 using Microsoft.JSInterop;
 using System.ComponentModel;
 using System.Reflection;
+using System.Security;
 
 namespace BlazorWinbox;
 
@@ -65,6 +66,17 @@ public class BasicWindowOptions : GlobalWindowOptions
     [Obsolete("Do not use this in your code, it is allowed to be used internally by Window")]
     [EditorBrowsable(EditorBrowsableState.Never)]
     public string OnCloseHandlerName { get; set; }
+
+    public string OnMoveHandlerName { get; set; }
+    public string OnShowHandlerName { get; set; }
+    public string OnHideHandlerName { get; set; }
+    public string OnFocusHandlerName { get; set; }
+    public string OnBlurHandlerName { get; set; }
+    public string OnResizeHandlerName { get; set; }
+    public string OnFullScreenHandlerName { get; set; }
+    public string OnMaximizeHandlerName { get; set; }
+    public string OnMinimizeHandlerName { get; set; }
+    public string OnRestoreHandlerName { get; set; }
 
     internal static BasicWindowOptions CreateCopy(BasicWindowOptions basicWindowOptions)
     {

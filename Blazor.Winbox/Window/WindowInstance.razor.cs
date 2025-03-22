@@ -47,6 +47,17 @@ public partial class WindowInstance
         Options.BlazorWindowInstanceReference = DotNetObjectReference.Create(this);
         Options.OnCloseHandlerName = nameof(CloseAsync);
 
+        Options.OnMoveHandlerName = nameof(OnMove);
+        Options.OnShowHandlerName = nameof(OnShow);
+        Options.OnHideHandlerName = nameof(OnHide);
+        Options.OnFocusHandlerName = nameof(OnFocus);
+        Options.OnBlurHandlerName = nameof(OnBlur);
+        Options.OnResizeHandlerName = nameof(OnResize);
+        Options.OnFullScreenHandlerName = nameof(OnFullscreen);
+        Options.OnMaximizeHandlerName = nameof(OnMaximize);
+        Options.OnMinimizeHandlerName = nameof(OnMinimize);
+        Options.OnRestoreHandlerName = nameof(OnRestore);
+
         _Options = Options;
     }
 
@@ -335,6 +346,11 @@ public partial class WindowInstance
         _Options.OnFullScreen?.Invoke(state);
         WindowManager.Fullscreen(Id, state);
     }
+    [JSInvokable]
+    public void OnFullscreen()
+    {
+        _Options.OnFullScreen?.Invoke(null);
+    }
 
     /// <summary>
     /// Hide a specific window
@@ -344,6 +360,11 @@ public partial class WindowInstance
     {
         _Options.OnHide?.Invoke(state);
         WindowManager.Hide(Id, state);
+    }
+    [JSInvokable]
+    public void OnHide()
+    {
+        _Options.OnHide?.Invoke(null);
     }
 
     /// <summary>
@@ -355,6 +376,11 @@ public partial class WindowInstance
         _Options.OnMaximize?.Invoke(state);
         WindowManager.Maximize(Id, state);
     }
+    [JSInvokable]
+    public void OnMaximize()
+    {
+        _Options.OnMaximize?.Invoke(null);
+    }
 
     /// <summary>
     /// Set the minimized state of a window
@@ -364,6 +390,11 @@ public partial class WindowInstance
     {
         _Options.OnMinimize?.Invoke(state);
         WindowManager.Minimize(Id, state);
+    }
+    [JSInvokable]
+    public void OnMinimize()
+    {
+        _Options.OnMinimize?.Invoke(null);
     }
 
     /// <summary>
@@ -375,6 +406,12 @@ public partial class WindowInstance
     {
         _Options.OnMove?.Invoke(x, y);
         WindowManager.Move(Id, x, y);
+    }
+
+    [JSInvokable]
+    public void OnMove(long x, long y)
+    {
+        _Options.OnMove?.Invoke(x.ToString(), y.ToString());
     }
 
     /// <summary>
@@ -405,6 +442,11 @@ public partial class WindowInstance
         _Options.OnResize?.Invoke(width, height);
         WindowManager.Resize(Id, width, height);
     }
+    [JSInvokable]
+    public void OnResize(long w, long h)
+    {
+        _Options.OnResize?.Invoke(w.ToString(), h.ToString());
+    }
 
     /// <summary>
     /// Restore the state of a window
@@ -413,6 +455,11 @@ public partial class WindowInstance
     {
         _Options.OnRestore?.Invoke();
         WindowManager.Restore(Id);
+    }
+    [JSInvokable]
+    public void OnRestore()
+    {
+        _Options.OnRestore?.Invoke();
     }
 
     public void SetBackground(string backgroundColor)
@@ -434,6 +481,11 @@ public partial class WindowInstance
         _Options.OnShow?.Invoke(state);
         WindowManager.Show(Id, state);
     }
+    [JSInvokable]
+    public void OnShow()
+    {
+        _Options.OnShow?.Invoke(null);
+    }
 
     /// <summary>
     /// You can toggle all control classes from above along the window's lifetime
@@ -453,6 +505,11 @@ public partial class WindowInstance
         _Options.OnFocus?.Invoke(state);
         WindowManager.Focus(Id, state);
     }
+    [JSInvokable]
+    public void OnFocus()
+    {
+        _Options.OnFocus?.Invoke(null);
+    }
 
     /// <summary>
     /// Blur a focused window
@@ -462,6 +519,11 @@ public partial class WindowInstance
     {
         _Options.OnBlur?.Invoke(state);
         WindowManager.Blur(Id, state);
+    }
+    [JSInvokable]
+    public void OnBlur()
+    {
+        _Options.OnBlur?.Invoke(null);
     }
 
     /// <summary>
