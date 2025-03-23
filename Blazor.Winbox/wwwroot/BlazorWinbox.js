@@ -13,63 +13,63 @@
             }
         };
 
-        windowOptions.onresize = (w, h) => {
-            WinBoxWindowManager
+        windowOptions.onresize = async (w, h) => {
+            await WinBoxWindowManager
                 .CallMethodWithParameters(windowOptions.blazorWindowInstanceReference,
                     windowOptions.onResizeHandlerName,
                     w, h);
         };
-        windowOptions.onmove = (x, y) => {
-            WinBoxWindowManager
+        windowOptions.onmove = async (x, y) => {
+            await WinBoxWindowManager
                 .CallMethodWithParameters(windowOptions.blazorWindowInstanceReference,
                     windowOptions.onMoveHandlerName,
                     x, y);
         };
-        windowOptions.onshow = () => {
-            WinBoxWindowManager
+        windowOptions.onshow = async () => {
+            await WinBoxWindowManager
                 .CallMethodWithParameters(windowOptions.blazorWindowInstanceReference,
                     windowOptions.onShowHandlerName);
         };
-        windowOptions.onhide = () => {
-            WinBoxWindowManager
+        windowOptions.onhide = async () => {
+            await WinBoxWindowManager
                 .CallMethodWithParameters(windowOptions.blazorWindowInstanceReference,
                     windowOptions.onHideHandlerName);
         };
-        windowOptions.onfocus = () => {
-            WinBoxWindowManager
+        windowOptions.onfocus = async () => {
+            await WinBoxWindowManager
                 .CallMethodWithParameters(windowOptions.blazorWindowInstanceReference,
-                    windowOptions.onFocusHandlerName);
+                    windowOptions.onFocusHandlerName, null);
         };
-        windowOptions.onblur = () => {
-            WinBoxWindowManager
+        windowOptions.onblur = async () => {
+            await WinBoxWindowManager
                 .CallMethodWithParameters(windowOptions.blazorWindowInstanceReference,
                     windowOptions.onBlurHandlerName);
         };
-        windowOptions.onfullscreen = () => {
-            WinBoxWindowManager
+        windowOptions.onfullscreen = async () => {
+            await WinBoxWindowManager
                 .CallMethodWithParameters(windowOptions.blazorWindowInstanceReference,
                     windowOptions.onFullScreenHandlerName);
         };
-        windowOptions.onmaximize = () => {
-            WinBoxWindowManager
+        windowOptions.onmaximize = async () => {
+            await WinBoxWindowManager
                 .CallMethodWithParameters(windowOptions.blazorWindowInstanceReference,
                     windowOptions.onMaximizeHandlerName);
         };
-        windowOptions.onminimize = () => {
-            WinBoxWindowManager
+        windowOptions.onminimize = async () => {
+            await WinBoxWindowManager
                 .CallMethodWithParameters(windowOptions.blazorWindowInstanceReference,
                     windowOptions.onMinimizeHandlerName);
         };
-        windowOptions.onrestore = () => {
-            WinBoxWindowManager
+        windowOptions.onrestore = async () => {
+            await WinBoxWindowManager
                 .CallMethodWithParameters(windowOptions.blazorWindowInstanceReference,
                     windowOptions.onRestoreHandlerName);
         };
         let winBoxElement = new WinBox(windowOptions, title);
         return winBoxElement;
     },
-    CallMethodWithParameters: (dotnetHelper, methodName, ...params) => {
-        return dotnetHelper.invokeMethod(methodName, ...params);
+    CallMethodWithParameters: async (dotnetHelper, methodName, ...params) => {
+        return await dotnetHelper.invokeMethodAsync(methodName, ...params);
     }
 
 }

@@ -36,12 +36,14 @@
             _x = x;
             _y = y;
             StateHasChanged();
+            return Task.CompletedTask;
         };
         _window.WindowInstance.Options.OnResize = (w, h) =>
         {
             _w = w;
             _h = h;
             StateHasChanged();
+            return Task.CompletedTask;
         };
     }
     
@@ -52,31 +54,31 @@
         return $"rgb({random.Next(0, 256)},{random.Next(0, 256)},{random.Next(0, 256)})";
     }
 
-    private void Minimize()
+    private async Task Minimize()
     {
-        WindowInstance.Minimize();
+        await WindowInstance.Minimize();
     }
 
-    private void Maximize()
+    private async Task Maximize()
     {
         _IsMax = !_IsMax;
-        WindowInstance.Maximize(_IsMax);
+        await WindowInstance.Maximize(_IsMax);
     }
 
-    private void Fullscreen()
+    private async Task Fullscreen()
     {
         _IsFullScreen = !_IsFullScreen;
-        WindowInstance.Fullscreen(_IsFullScreen);
+        await WindowInstance.Fullscreen(_IsFullScreen);
     }
 
-    private void Restore()
+    private async Task Restore()
     {
-        WindowInstance.Restore();
+        await WindowInstance.Restore();
     }
 
-    private void Resize()
+    private async Task Resize()
     {
-        WindowInstance.Resize("50%", "50%");
+        await WindowInstance.Resize("50%", "50%");
     }
 
     private void SetTitle()
@@ -89,20 +91,20 @@
         WindowInstance.SetBackground(GetRandomBackground());
     }
 
-    private void Close()
+    private async Task Close()
     {
-        WindowInstance.CloseAsync();
+        await WindowInstance.CloseAsync();
     }
 
-    private void Move()
+    private async Task Move()
     {
-        WindowInstance.Move("center", "center");
+        await WindowInstance.Move("center", "center");
     }
 
     private bool isFocus = false;
-    private void Focus()
+    private async Task Focus()
     {
         isFocus = !isFocus;
-        WindowInstance.Focus(isFocus);
+        await WindowInstance.Focus();
     }
 }

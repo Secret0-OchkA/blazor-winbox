@@ -30,7 +30,7 @@ public interface IWindowManager
     /// <param name="windowOptions">Options of window</param>
     /// <returns>data of the <see cref="WindowResult"/> returned by the window on close</returns>
     Task<object> OpenReValAsync<TComponent>(string title = null, WindowParameters windowParameters = null, WindowOptions windowOptions = null) where TComponent : ComponentBase;
-    void InjectComponentIntoWindow(string title, WindowOptions options);
+    Task InjectComponentIntoWindow(string title, WindowOptions options);
     bool HasJsWindowReference(Guid id);
     void CloseBlzr(Guid winId, WindowResult result);
     public void Close(Guid winId, WindowResult result);

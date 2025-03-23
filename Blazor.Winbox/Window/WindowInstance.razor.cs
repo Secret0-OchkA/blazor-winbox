@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using System.ComponentModel;
+using System.Runtime.CompilerServices;
 
 namespace BlazorWinbox;
 
@@ -341,60 +342,68 @@ public partial class WindowInstance
     /// Set the fullscreen state of a window
     /// </summary>
     /// <param name="state"></param>
-    public void Fullscreen(bool? state = null)
+    public async Task Fullscreen(bool? state = null)
     {
-        _Options.OnFullScreen?.Invoke(state);
         WindowManager.Fullscreen(Id, state);
+        if (_Options.OnFullScreen is null) return;
+        await _Options.OnFullScreen.Invoke(state);
     }
     [JSInvokable]
-    public void OnFullscreen()
+    public async Task OnFullscreen(bool? state = null)
     {
-        _Options.OnFullScreen?.Invoke(null);
+        if (_Options.OnFullScreen is null) return;
+        await _Options.OnFullScreen.Invoke(state);
     }
 
     /// <summary>
     /// Hide a specific window
     /// </summary>
     /// <param name="state"></param>
-    public void Hide(bool? state = null)
+    public async Task Hide(bool? state = null)
     {
-        _Options.OnHide?.Invoke(state);
         WindowManager.Hide(Id, state);
+        if (_Options.OnHide is null) return;
+        await _Options.OnHide.Invoke(state);
     }
     [JSInvokable]
-    public void OnHide()
+    public async Task OnHide(bool? state = null)
     {
-        _Options.OnHide?.Invoke(null);
+        if (_Options.OnHide is null) return;
+        await _Options.OnHide.Invoke(state);
     }
 
     /// <summary>
     /// Set the maximized state of a window
     /// </summary>
     /// <param name="state"></param>
-    public void Maximize(bool? state = null)
+    public async Task Maximize(bool? state = null)
     {
-        _Options.OnMaximize?.Invoke(state);
         WindowManager.Maximize(Id, state);
+        if (_Options.OnMaximize is null) return;
+        await _Options.OnMaximize.Invoke(state);
     }
     [JSInvokable]
-    public void OnMaximize()
+    public async Task OnMaximize(bool? state = null)
     {
-        _Options.OnMaximize?.Invoke(null);
+        if (_Options.OnMaximize is null) return;
+        await _Options.OnMaximize.Invoke(state);
     }
 
     /// <summary>
     /// Set the minimized state of a window
     /// </summary>
     /// <param name="state"></param>
-    public void Minimize(bool? state = null)
+    public async Task Minimize(bool? state = null)
     {
-        _Options.OnMinimize?.Invoke(state);
         WindowManager.Minimize(Id, state);
+        if (_Options.OnMinimize is null) return;
+        await _Options.OnMinimize.Invoke(state);
     }
     [JSInvokable]
-    public void OnMinimize()
+    public async Task OnMinimize(bool? state = null)
     {
-        _Options.OnMinimize?.Invoke(null);
+        if (_Options.OnMinimize is null) return;
+        await _Options.OnMinimize.Invoke(state);
     }
 
     /// <summary>
@@ -402,16 +411,18 @@ public partial class WindowInstance
     /// </summary>
     /// <param name="x"></param>
     /// <param name="y"></param>
-    public void Move(string x, string y)
+    public async Task Move(string x, string y)
     {
-        _Options.OnMove?.Invoke(x, y);
         WindowManager.Move(Id, x, y);
+        if (_Options.OnMove is null) return;
+        await _Options.OnMove.Invoke(x, y);
     }
 
     [JSInvokable]
-    public void OnMove(long x, long y)
+    public async Task OnMove(long x, long y)
     {
-        _Options.OnMove?.Invoke(x.ToString(), y.ToString());
+        if (_Options.OnMove is null) return;
+        await _Options.OnMove.Invoke(x.ToString(), y.ToString());
     }
 
     /// <summary>
@@ -437,29 +448,33 @@ public partial class WindowInstance
     /// </summary>
     /// <param name="width"></param>
     /// <param name="height"></param>
-    public void Resize(string width, string height)
+    public async Task Resize(string width, string height)
     {
-        _Options.OnResize?.Invoke(width, height);
         WindowManager.Resize(Id, width, height);
+        if (_Options.OnResize is null) return;
+        await _Options.OnResize.Invoke(width, height);
     }
     [JSInvokable]
-    public void OnResize(long w, long h)
+    public async Task OnResize(long w, long h)
     {
-        _Options.OnResize?.Invoke(w.ToString(), h.ToString());
+        if (_Options.OnResize is null) return;
+        await _Options.OnResize.Invoke(w.ToString(), h.ToString());
     }
 
     /// <summary>
     /// Restore the state of a window
     /// </summary>
-    public void Restore()
+    public async Task Restore()
     {
-        _Options.OnRestore?.Invoke();
         WindowManager.Restore(Id);
+        if (_Options.OnRestore is null) return;
+        await _Options.OnRestore.Invoke();
     }
     [JSInvokable]
-    public void OnRestore()
+    public async Task OnRestore()
     {
-        _Options.OnRestore?.Invoke();
+        if (_Options.OnRestore is null) return;
+        await _Options.OnRestore.Invoke();
     }
 
     public void SetBackground(string backgroundColor)
@@ -476,15 +491,17 @@ public partial class WindowInstance
     /// Show a specific hidden window
     /// </summary>
     /// <param name="state"></param>
-    public void Show(bool? state = null)
+    public async Task Show(bool? state = null)
     {
-        _Options.OnShow?.Invoke(state);
         WindowManager.Show(Id, state);
+        if (_Options.OnShow is null) return;
+        await _Options.OnShow.Invoke(state);
     }
     [JSInvokable]
-    public void OnShow()
+    public async Task OnShow(bool? state = null)
     {
-        _Options.OnShow?.Invoke(null);
+        if (_Options.OnShow is null) return;
+        await _Options.OnShow.Invoke(state);
     }
 
     /// <summary>
@@ -500,30 +517,34 @@ public partial class WindowInstance
     /// Focus a window (bring up to front)
     /// </summary>
     /// <param name="state"></param>
-    public void Focus(bool? state = null)
+    public async Task Focus(bool? state = null)
     {
-        _Options.OnFocus?.Invoke(state);
-        WindowManager.Focus(Id, state);
+        WindowManager.Focus(Id);
+        if (_Options.OnFocus is null) return;
+        await _Options.OnFocus.Invoke(state);
     }
     [JSInvokable]
-    public void OnFocus()
+    public async Task OnFocus(bool? state = null)
     {
-        _Options.OnFocus?.Invoke(null);
+        if (_Options.OnFocus is null) return;
+        await _Options.OnFocus.Invoke(state);
     }
 
     /// <summary>
     /// Blur a focused window
     /// </summary>
     /// <param name="state"></param>
-    public void Blur(bool? state = null)
+    public async Task Blur(bool? state = null)
     {
-        _Options.OnBlur?.Invoke(state);
         WindowManager.Blur(Id, state);
+        if (_Options.OnBlur is null) return;
+        await _Options.OnBlur.Invoke(state);
     }
     [JSInvokable]
-    public void OnBlur()
+    public async Task OnBlur(bool? state = null)
     {
-        _Options.OnBlur?.Invoke(null);
+        if (_Options.OnBlur is null) return;
+        await _Options.OnBlur.Invoke(state);
     }
 
     /// <summary>

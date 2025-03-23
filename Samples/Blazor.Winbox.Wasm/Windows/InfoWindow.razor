@@ -1,0 +1,38 @@
+﻿<Window @ref="_window" style="style">
+    <div>
+        <div>cord(px): X:@_x Y:@_y</div>
+        <div>size(px): W:@_w H:@_h</div>
+    </div>
+</Window>
+@code {
+    [CascadingParameter] public WindowInstance WindowInstance { get; set; }
+
+    [Parameter] public Action<WindowInstance, long, long> OnMoveUp { get; set; }
+
+    Window _window;
+    private string style = "";
+
+    private string _w, _h, _x, _y = "";
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        base.OnAfterRender(firstRender);
+
+        if (!firstRender) return;
+
+        _window.WindowInstance.Options.OnMove += (x, y) =>
+        {
+            _x = x;
+            _y = y;
+            StateHasChanged();
+            return Task.CompletedTask;
+        };
+        _window.WindowInstance.Options.OnResize += (w, h) =>
+        {
+            _w = w;
+            _h = h;
+            StateHasChanged();
+            return Task.CompletedTask;
+        };
+    }
+}

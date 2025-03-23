@@ -1,0 +1,108 @@
+﻿@page "/docking"
+@using Blazor.Winbox.Wasm.Windows
+
+<PageTitle>Docking-Windows Usage</PageTitle>
+<div class="input-group m-2" style="width: 349px;">
+    <button @onclick="@OpenWindow" class="btn btn-outline-secondary" type="button" id="button-open">Open Window</button>
+
+    <div id="dock-line-top" class="dock-line horizontal"></div>
+    <div id="dock-line-bottom" class="dock-line horizontal"></div>
+    <div id="dock-line-left" class="dock-line vertical"></div>
+    <div id="dock-line-right" class="dock-line vertical"></div>
+</div>
+
+<style>
+    .dock-line {
+    position: absolute;
+    background: rgba(0, 150, 255, 0.5);
+    z-index: 9999;
+    display: none;
+    }
+
+    .dock-line.vertical {
+    width: 2px;
+    height: 100vh;
+    }
+
+    .dock-line.horizontal {
+    height: 2px;
+    width: 100vw;
+    }
+</style>
+
+@code {
+    [Inject] public IWindowManager windowManager { get; set; }
+    [Inject] IJSRuntime jSRuntime { get; init; } = null!;
+
+    List<IWindowReference> windows = new();
+
+    private async Task OpenWindow()
+    {
+        WindowOptions xWindowOptions = new() { Height = "400px", Width = "350px", Icon = "./HITIcon.png" };
+
+        var parameters = new WindowParameters();
+        //parameters.Add("OnMoveUp", (w,x,y) => {});
+
+        var windowRef = windowManager.Open<InfoWindow>("info window", parameters, xWindowOptions);
+        windows.Add(windowRef);
+    }
+
+    public async Task HandleMoveAsync(WindowInstance window, long x, long y)
+    {
+        Console.WriteLine("hello");
+        var movingWindow = windows.FirstOrDefault(w => w.Id == window.Id);
+        if (movingWindow == null) return;
+
+        var snapDistance = 10.0;
+        double? snappedX = null, snappedY = null;
+
+        foreach (var otherWin in windows)
+        {
+            if (otherWin == movingWindow) continue;
+            var rect = await jSRuntime.InvokeAsync<BoundingClientRect>("GetBoundingClientRectPort", otherWin);
+            var winRect = await jSRuntime.InvokeAsync<BoundingClientRect>("GetBoundingClientRectPort", movingWindow);
+
+            // if (Math.Abs(winRect.Right - rect.Left) < snapDistance)
+            // {
+            //     snappedX = rect.Left - winRect.Width;
+            //     await Js.InvokeVoidAsync("winboxDock.showDockLine", "right", rect.Left);
+            // }
+            // if (Math.Abs(winRect.Left - rect.Right) < snapDistance)
+            // {
+            //     snappedX = rect.Right;
+            //     await JS.InvokeVoidAsync("winboxDock.showDockLine", "left", rect.Right);
+            // }
+            // if (Math.Abs(winRect.Bottom - rect.Top) < snapDistance)
+            // {
+            //     snappedY = rect.Top - winRect.Height;
+            //     await JS.InvokeVoidAsync("winboxDock.showDockLine", "bottom", rect.Top);
+            // }
+            // if (Math.Abs(winRect.Top - rect.Bottom) < snapDistance)
+            // {
+            //     snappedY = rect.Bottom;
+            //     await JS.InvokeVoidAsync("winboxDock.showDockLine", "top", rect.Bottom);
+            // }
+        }
+
+        if (snappedX.HasValue || snappedY.HasValue)
+        {
+            //await movingWindow.MoveAsync(snappedX ?? x, snappedY ?? y);
+        }
+        else
+        {
+            //await JS.InvokeVoidAsync("winboxDock.hideDockLines");
+        }
+    }
+
+    public class BoundingClientRect
+    {
+        public double X { get; set; }
+        public double Y { get; set; }
+        public double Width { get; set; }
+        public double Height { get; set; }
+        public double Top { get; set; }
+        public double Right { get; set; }
+        public double Bottom { get; set; }
+        public double Left { get; set; }
+    }
+}

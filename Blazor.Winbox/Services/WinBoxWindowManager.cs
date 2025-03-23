@@ -73,7 +73,7 @@ public class WinBoxWindowManager : IWindowManager
         return new WinBoxWindowReference(Guid.NewGuid());
     }
 
-    public void InjectComponentIntoWindow(string title, WindowOptions options)
+    public async Task InjectComponentIntoWindow(string title, WindowOptions options)
     {
         if (!string.IsNullOrEmpty(title))
         {
@@ -82,7 +82,7 @@ public class WinBoxWindowManager : IWindowManager
         }
         BasicWindowOptions xJsWindowOptions = BasicWindowOptions.CreateCopy(options);
         IJSInProcessRuntime xJsInProcess = (IJSInProcessRuntime)_js;
-        IJSObjectReference xJsWindowReference = xJsInProcess.Invoke<IJSObjectReference>("WinBoxWindowManager.OpenWindow", title, xJsWindowOptions);
+        IJSObjectReference xJsWindowReference = await xJsInProcess.InvokeAsync<IJSObjectReference>("WinBoxWindowManager.OpenWindow", title, xJsWindowOptions);
         _windowsJsReferences.Add(Guid.Parse(options.Id), xJsWindowReference as IJSInProcessObjectReference);
     }
 
