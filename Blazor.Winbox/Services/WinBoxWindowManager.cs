@@ -22,11 +22,15 @@ public class WinBoxWindowManager : IWindowManager
 
     public IWindowReference Open<TComponent>(string title = null, WindowParameters windowParameters = null, WindowOptions windowOptions = null) where TComponent : ComponentBase
     {
+        return Open(typeof(TComponent), title, windowParameters, windowOptions);
+    }
+    public IWindowReference Open(Type type, string title = null, WindowParameters windowParameters = null, WindowOptions windowOptions = null)
+    {
         IWindowReference xWindowReference = CreateReference();
         RenderFragment xWindowContent = new(builder =>
         {
             var xAttributesCount = 0;
-            builder.OpenComponent<TComponent>(xAttributesCount++);
+            builder.OpenComponent(xAttributesCount++, type);
             if (windowParameters is { Count: > 0 })
             {
                 foreach (KeyValuePair<string, object> iParameter in windowParameters)

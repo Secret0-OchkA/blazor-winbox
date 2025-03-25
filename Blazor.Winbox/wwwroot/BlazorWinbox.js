@@ -3,7 +3,6 @@
     OpenWindow: (title, windowOptions, componentRef) => {
 
         windowOptions.onclose = (force) => {
-            console.log('onclose');
             if (force === true) {
                 WinBoxWindowManager.CallMethodWithParameters(windowOptions.blazorWindowInstanceReference, windowOptions.xCloseHandlerName);
                 return false;

@@ -18,6 +18,7 @@ public interface IWindowManager
     /// <param name="windowOptions">Options of window</param>
     /// <returns>a window reference</returns>
     IWindowReference Open<TComponent>(string title = null, WindowParameters windowParameters = null, WindowOptions windowOptions = null) where TComponent : ComponentBase;
+    IWindowReference Open(Type componentType, string title = null, WindowParameters windowParameters = null, WindowOptions windowOptions = null);
 
     /// <summary>
     /// Open a window of any type and get the result data returned by the window
