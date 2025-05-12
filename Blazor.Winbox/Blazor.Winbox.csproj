@@ -1,7 +1,6 @@
 <Project Sdk="Microsoft.NET.Sdk.Razor">
-
   <PropertyGroup>
-    <TargetFramework>net6.0</TargetFramework>
+    <TargetFramework>net9.0</TargetFramework>
     <Nullable>disable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
@@ -13,7 +12,8 @@
     <Title>Blazor Multiple Windows</Title>
     <Copyright>Copyright 2022 </Copyright>
     <PackageIcon>favicon.png</PackageIcon>
-    <PackageReadmeFile></PackageReadmeFile>
+    <PackageReadmeFile>
+    </PackageReadmeFile>
     <RepositoryUrl>https://github.com/TameemHabash/blazor-winbox</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>blazor multi window multiple windows winbox wasm client side</PackageTags>
@@ -21,11 +21,9 @@
     <PackageReleaseNotes>Change namespace from  Blazor.Winbox to BlazorWinbox to prevent namespaces overlap in .razor files</PackageReleaseNotes>
     <RootNamespace>BlazorWinbox</RootNamespace>
   </PropertyGroup>
-
   <ItemGroup>
     <Content Remove="wwwroot\HITIcon.png" />
   </ItemGroup>
-
   <ItemGroup>
     <None Include="..\Docs\favicon.png">
       <Pack>True</Pack>
@@ -36,20 +34,15 @@
       <PackagePath>\</PackagePath>
     </None>
   </ItemGroup>
-
-
   <ItemGroup>
     <SupportedPlatform Include="browser" />
   </ItemGroup>
-
   <ItemGroup>
-    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="6.0.9" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" Version="9.0.4" />
   </ItemGroup>
-
   <ItemGroup>
     <Content Update="wwwroot\BlazorWinbox.min.js">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
-
 </Project>
