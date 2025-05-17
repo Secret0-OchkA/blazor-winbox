@@ -2,7 +2,6 @@
 using Microsoft.JSInterop;
 using System.ComponentModel;
 using System.Reflection;
-using System.Security;
 
 namespace BlazorWinbox;
 
