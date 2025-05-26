@@ -44,7 +44,7 @@ public class WindowOptions : BasicWindowOptions
     /// <para>takes force:bool parameter</para>
     /// <para>returns completeClose : bool</para>
     /// </summary>
-    public Func<bool> OnClose { get; set; }
+    public Func<Task<bool>> OnClose { get; set; }
 
     /// <summary>
     /// Callbacks triggered when the window is closing. The keyword this inside the callback function refers to the corresponding WinBox instance. Note: the event 'onclose' will be triggered right before closing and stops closing when a callback was applied and returns a truthy value.
