@@ -309,16 +309,16 @@ public partial class WindowInstance
 
     public async Task CloseAsync(WindowResult result)
     {
-        var xCompleteClose = await _Options.OnClose?.Invoke();
+        bool? xCompleteClose = null;
+        if (_Options.OnClose is not null)
+            xCompleteClose = await _Options.OnClose.Invoke();
+
         bool? xCompleteCloseAsync = null;
-        if (_Options.OnCloseAsync != null)
-        {
+        if (_Options.OnCloseAsync is not null)
             xCompleteCloseAsync = await _Options.OnCloseAsync?.Invoke();
-        }
+        
         if (xCompleteClose is not false && xCompleteCloseAsync is not false)
-        {
             ForceClose(result);
-        }
     }
 
     [JSInvokable]
