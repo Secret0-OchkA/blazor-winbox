@@ -316,7 +316,7 @@ public partial class WindowInstance
         bool? xCompleteCloseAsync = null;
         if (_Options.OnCloseAsync is not null)
             xCompleteCloseAsync = await _Options.OnCloseAsync?.Invoke();
-        
+
         if (xCompleteClose is not false && xCompleteCloseAsync is not false)
             ForceClose(result);
     }
