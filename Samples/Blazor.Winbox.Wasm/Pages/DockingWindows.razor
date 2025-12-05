@@ -2,7 +2,7 @@
 @using Blazor.Winbox.Wasm.Windows
 
 <PageTitle>Docking-Windows Usage</PageTitle>
-<div class="input-group m-2" style="width: 349px;">
+<div class="input-group m-2" style="width: 349px; background-color:aqua;">
     <button @onclick="@OpenWindow" class="btn btn-outline-secondary" type="button" id="button-open">Open Window</button>
 
     <div id="dock-line-top" class="dock-line horizontal"></div>
@@ -44,6 +44,8 @@
         //parameters.Add("OnMoveUp", (w,x,y) => {});
 
         var windowRef = windowManager.Open<InfoWindow>("info window", parameters, xWindowOptions);
+
+        windowManager.Blur(windowRef.Id, true);
         windows.Add(windowRef);
     }
 
