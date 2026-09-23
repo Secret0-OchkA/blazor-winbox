@@ -4,7 +4,7 @@
     <Nullable>disable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
-    <Version>0.2.13</Version>
+    <Version>0.2.13-local</Version>
     <Authors>Tameem Habash</Authors>
     <Company>HIT</Company>
     <Description>Blazor Multiple Windows Library that wraps winbox.js in Blazor components
