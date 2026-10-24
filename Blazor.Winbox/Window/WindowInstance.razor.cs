@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Components;
 using Microsoft.JSInterop;
 using System.ComponentModel;
+using System.Reflection;
 
 namespace BlazorWinbox;
 
@@ -43,10 +44,13 @@ public partial class WindowInstance
         SetRight();
         SetLeft();
         SetDocking();
+        SetToolbar();
+        SetControlButtons();
         Options.Id = Id.ToString("N");
         Options.XCloseHandlerName = nameof(OnXClose);
         Options.BlazorWindowInstanceReference = DotNetObjectReference.Create(this);
         Options.OnCloseHandlerName = nameof(CloseAsync);
+        Options.OnToolbarButtonClickHandlerName = nameof(OnToolbarButtonClick);
 
         Options.OnMoveHandlerName = nameof(OnMove);
         Options.OnShowHandlerName = nameof(OnShow);
@@ -218,6 +222,101 @@ public partial class WindowInstance
         }
     }
 
+    private void SetToolbar()
+    {
+        List<ToolbarButton> xGlobalButtons = GlobalWindowOptions?.Toolbar;
+        List<ToolbarButton> xInstanceButtons = Options.Toolbar;
+
+        if (xGlobalButtons is null or { Count: 0 } && xInstanceButtons is null or { Count: 0 })
+        {
+            return;
+        }
+
+        List<ToolbarButton> xButtons = new();
+
+        if (xGlobalButtons is not null && !ReferenceEquals(xGlobalButtons, xInstanceButtons))
+        {
+            xButtons.AddRange(xGlobalButtons.Where(x => x is not null));
+        }
+
+        if (xInstanceButtons is not null)
+        {
+            foreach (ToolbarButton iButton in xInstanceButtons.Where(x => x is not null))
+            {
+                int xIndex = string.IsNullOrEmpty(iButton.Id)
+                    ? -1
+                    : xButtons.FindIndex(x => x.Id == iButton.Id);
+
+                if (xIndex >= 0)
+                {
+                    xButtons[xIndex] = iButton;
+                }
+                else
+                {
+                    xButtons.Add(iButton);
+                }
+            }
+        }
+
+        foreach (ToolbarButton iButton in xButtons)
+        {
+            if (string.IsNullOrEmpty(iButton.Id))
+            {
+                iButton.Id = Guid.NewGuid().ToString("N");
+            }
+        }
+
+        Options.Toolbar = xButtons;
+    }
+
+    private void SetControlButtons()
+    {
+        Options.Minimize = MergeControlButton(Options.Minimize, GlobalWindowOptions?.Minimize);
+        Options.Maximize = MergeControlButton(Options.Maximize, GlobalWindowOptions?.Maximize);
+        Options.Fullscreen = MergeControlButton(Options.Fullscreen, GlobalWindowOptions?.Fullscreen);
+        Options.Close = MergeControlButton(Options.Close, GlobalWindowOptions?.Close);
+    }
+
+    private static readonly PropertyInfo[] ControlButtonProperties = typeof(WindowControlButton).GetProperties();
+
+    /// <summary>
+    /// Creates the effective control settings: values of the window level object win over the global ones.
+    /// </summary>
+    private static WindowControlButton MergeControlButton(WindowControlButton instanceButton, WindowControlButton globalButton)
+    {
+        if (instanceButton is null && globalButton is null)
+        {
+            return null;
+        }
+
+        WindowControlButton xMerged = new();
+        bool xAnyValueSet = false;
+
+        foreach (PropertyInfo iProperty in ControlButtonProperties)
+        {
+            object xValue = instanceButton is null ? null : iProperty.GetValue(instanceButton);
+
+            if (IsUnsetValue(xValue))
+            {
+                xValue = globalButton is null ? null : iProperty.GetValue(globalButton);
+            }
+
+            if (!IsUnsetValue(xValue))
+            {
+                xAnyValueSet = true;
+            }
+
+            iProperty.SetValue(xMerged, xValue);
+        }
+
+        return xAnyValueSet ? xMerged : null;
+    }
+
+    private static bool IsUnsetValue(object value)
+    {
+        return value is null || value is string xString && string.IsNullOrEmpty(xString);
+    }
+
     private void SetAutoSize()
     {
         if (Options.AutoSize.HasValue)
@@ -351,14 +450,14 @@ public partial class WindowInstance
     }
 
     /// <summary>
-    /// Set the fullscreen state of a window
+    /// Set the fullscreen state of a window. The window is expanded to the viewport while the title bar and toolbar stay visible.
+    /// <para>The <see cref="WindowOptions.OnFullScreen"/> callback is triggered by the window itself once the state changed.</para>
     /// </summary>
-    /// <param name="state"></param>
-    public async Task Fullscreen(bool? state = null)
+    /// <param name="state">true to enter fullscreen, false to leave it, null to toggle it</param>
+    public Task Fullscreen(bool? state = null)
     {
         WindowManager.Fullscreen(Id, state);
-        if (_Options.OnFullScreen is null) return;
-        await _Options.OnFullScreen.Invoke(state);
+        return Task.CompletedTask;
     }
     [JSInvokable]
     public async Task OnFullscreen(bool? state = null)
@@ -566,5 +665,157 @@ public partial class WindowInstance
     public void Mount(ElementReference windowContent)
     {
         WindowManager.Mount(Id, windowContent);
+    }
+
+    /// <summary>
+    /// Adds a custom button to the window toolbar.
+    /// <para>If a button with the same <see cref="ToolbarButton.Id"/> already exists it is replaced.</para>
+    /// </summary>
+    /// <param name="button">Button to add. A new <see cref="ToolbarButton.Id"/> is generated when it is not set.</param>
+    public void AddToolbarButton(ToolbarButton button)
+    {
+        ArgumentNullException.ThrowIfNull(button);
+
+        if (string.IsNullOrEmpty(button.Id))
+        {
+            button.Id = Guid.NewGuid().ToString("N");
+        }
+
+        _Options.Toolbar ??= new List<ToolbarButton>();
+
+        int xIndex = _Options.Toolbar.FindIndex(x => x.Id == button.Id);
+        if (xIndex >= 0)
+        {
+            _Options.Toolbar[xIndex] = button;
+        }
+        else
+        {
+            _Options.Toolbar.Add(button);
+        }
+
+        WindowManager.AddToolbarButton(Id, button);
+    }
+
+    /// <summary>
+    /// Updates an existing toolbar button (icon, tooltip, colors, visibility, disabled state) or adds it when it does not exist yet.
+    /// <para>The existing click action is kept when <see cref="ToolbarButton.OnClick"/> is not set on the passed button.</para>
+    /// </summary>
+    /// <param name="button">Button with the <see cref="ToolbarButton.Id"/> of the button to update.</param>
+    public void UpdateToolbarButton(ToolbarButton button)
+    {
+        ArgumentNullException.ThrowIfNull(button);
+
+        if (string.IsNullOrEmpty(button.Id))
+        {
+            throw new ArgumentException($"{nameof(ToolbarButton)}.{nameof(ToolbarButton.Id)} is required to update a toolbar button.", nameof(button));
+        }
+
+        _Options.Toolbar ??= new List<ToolbarButton>();
+
+        int xIndex = _Options.Toolbar.FindIndex(x => x.Id == button.Id);
+        if (xIndex >= 0)
+        {
+            button.OnClick ??= _Options.Toolbar[xIndex].OnClick;
+            _Options.Toolbar[xIndex] = button;
+        }
+        else
+        {
+            _Options.Toolbar.Add(button);
+        }
+
+        WindowManager.UpdateToolbarButton(Id, button);
+    }
+
+    /// <summary>
+    /// Removes a custom button from the window toolbar.
+    /// </summary>
+    /// <param name="buttonId"><see cref="ToolbarButton.Id"/> of the button to remove.</param>
+    public void RemoveToolbarButton(string buttonId)
+    {
+        if (string.IsNullOrEmpty(buttonId))
+        {
+            return;
+        }
+
+        _Options.Toolbar?.RemoveAll(x => x.Id == buttonId);
+        WindowManager.RemoveToolbarButton(Id, buttonId);
+    }
+
+    /// <summary>
+    /// Replaces all custom buttons of the window toolbar.
+    /// </summary>
+    /// <param name="buttons">New toolbar buttons. A new <see cref="ToolbarButton.Id"/> is generated for buttons which have no id.</param>
+    public void SetToolbarButtons(IEnumerable<ToolbarButton> buttons)
+    {
+        List<ToolbarButton> xButtons = buttons?.Where(x => x is not null).ToList() ?? new List<ToolbarButton>();
+
+        foreach (ToolbarButton iButton in xButtons)
+        {
+            if (string.IsNullOrEmpty(iButton.Id))
+            {
+                iButton.Id = Guid.NewGuid().ToString("N");
+            }
+        }
+
+        _Options.Toolbar = xButtons;
+        WindowManager.SetToolbarButtons(Id, xButtons);
+    }
+
+    /// <summary>
+    /// Customizes a built-in window control (icon, tooltip, colors, visibility, disabled state) after the window was opened.
+    /// <para>Values which are not set on the passed object are taken from the global options.
+    /// Passing null restores the default look of the control.</para>
+    /// </summary>
+    /// <param name="kind">Built-in control to customize.</param>
+    /// <param name="button">New settings of the control.</param>
+    public void UpdateControlButton(WindowControlKind kind, WindowControlButton button)
+    {
+        WindowControlButton xEffective = MergeControlButton(button, GetGlobalControlButton(kind));
+
+        switch (kind)
+        {
+            case WindowControlKind.Minimize:
+                _Options.Minimize = xEffective;
+                break;
+            case WindowControlKind.Maximize:
+                _Options.Maximize = xEffective;
+                break;
+            case WindowControlKind.Fullscreen:
+                _Options.Fullscreen = xEffective;
+                break;
+            case WindowControlKind.Close:
+                _Options.Close = xEffective;
+                break;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown window control.");
+        }
+
+        WindowManager.UpdateControlButton(Id, kind, xEffective);
+    }
+
+    private WindowControlButton GetGlobalControlButton(WindowControlKind kind)
+    {
+        return kind switch
+        {
+            WindowControlKind.Minimize => GlobalWindowOptions?.Minimize,
+            WindowControlKind.Maximize => GlobalWindowOptions?.Maximize,
+            WindowControlKind.Fullscreen => GlobalWindowOptions?.Fullscreen,
+            WindowControlKind.Close => GlobalWindowOptions?.Close,
+            _ => null
+        };
+    }
+
+    /// <summary>
+    /// Invoked from javascript when a custom toolbar button is clicked.
+    /// </summary>
+    [JSInvokable]
+    public async Task OnToolbarButtonClick(string buttonId)
+    {
+        ToolbarButton xButton = _Options.Toolbar?.FirstOrDefault(x => x.Id == buttonId);
+
+        if (xButton?.OnClick is not null)
+        {
+            await xButton.OnClick.Invoke();
+        }
     }
 }
