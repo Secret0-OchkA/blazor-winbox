@@ -2,69 +2,48 @@
 {
     OpenWindow: (title, windowOptions, componentRef) => {
 
+        let winBoxElement = null;
+        let closed = false;
+
+        const invoke = async (methodName, ...params) => {
+            try {
+                return await WinBoxWindowManager
+                    .CallMethodWithParameters(windowOptions.blazorWindowInstanceReference, methodName, ...params);
+            } catch (error) {
+                // callbacks can still be in flight while the window is closing and blazor
+                // already disposed the window instance, that is not an error worth reporting
+                if (!closed) {
+                    throw error;
+                }
+            }
+        };
+
         windowOptions.onclose = (force) => {
             if (force === true) {
-                WinBoxWindowManager.CallMethodWithParameters(windowOptions.blazorWindowInstanceReference, windowOptions.xCloseHandlerName);
+                // the window is destroyed right after this callback, release everything it holds
+                closed = true;
+                WinBoxDocking.detach(winBoxElement);
+                WinBoxFullscreen.detach(winBoxElement);
+                WinBoxToolbar.detach(winBoxElement);
+                invoke(windowOptions.xCloseHandlerName);
                 return false;
             } else {
-                WinBoxWindowManager.CallMethodWithParameters(windowOptions.blazorWindowInstanceReference, windowOptions.onCloseHandlerName);
+                invoke(windowOptions.onCloseHandlerName);
                 return true;
             }
         };
 
-        windowOptions.onresize = async (w, h) => {
-            await WinBoxWindowManager
-                .CallMethodWithParameters(windowOptions.blazorWindowInstanceReference,
-                    windowOptions.onResizeHandlerName,
-                    w, h);
-        };
-        windowOptions.onmove = async (x, y) => {
-            await WinBoxWindowManager
-                .CallMethodWithParameters(windowOptions.blazorWindowInstanceReference,
-                    windowOptions.onMoveHandlerName,
-                    x, y);
-        };
-        windowOptions.onshow = async () => {
-            await WinBoxWindowManager
-                .CallMethodWithParameters(windowOptions.blazorWindowInstanceReference,
-                    windowOptions.onShowHandlerName, null);
-        };
-        windowOptions.onhide = async () => {
-            await WinBoxWindowManager
-                .CallMethodWithParameters(windowOptions.blazorWindowInstanceReference,
-                    windowOptions.onHideHandlerName, null);
-        };
-        windowOptions.onfocus = async () => {
-            await WinBoxWindowManager
-                .CallMethodWithParameters(windowOptions.blazorWindowInstanceReference,
-                    windowOptions.onFocusHandlerName, null);
-        };
-        windowOptions.onblur = async () => {
-            await WinBoxWindowManager
-                .CallMethodWithParameters(windowOptions.blazorWindowInstanceReference,
-                    windowOptions.onBlurHandlerName, null);
-        };
-        windowOptions.onfullscreen = async () => {
-            await WinBoxWindowManager
-                .CallMethodWithParameters(windowOptions.blazorWindowInstanceReference,
-                    windowOptions.onFullScreenHandlerName, null);
-        };
-        windowOptions.onmaximize = async () => {
-            await WinBoxWindowManager
-                .CallMethodWithParameters(windowOptions.blazorWindowInstanceReference,
-                    windowOptions.onMaximizeHandlerName, null);
-        };
-        windowOptions.onminimize = async () => {
-            await WinBoxWindowManager
-                .CallMethodWithParameters(windowOptions.blazorWindowInstanceReference,
-                    windowOptions.onMinimizeHandlerName, null);
-        };
-        windowOptions.onrestore = async () => {
-            await WinBoxWindowManager
-                .CallMethodWithParameters(windowOptions.blazorWindowInstanceReference,
-                    windowOptions.onRestoreHandlerName);
-        };
-        let winBoxElement = new WinBox(windowOptions, title);
+        windowOptions.onresize = (w, h) => invoke(windowOptions.onResizeHandlerName, w, h);
+        windowOptions.onmove = (x, y) => invoke(windowOptions.onMoveHandlerName, x, y);
+        windowOptions.onshow = () => invoke(windowOptions.onShowHandlerName, null);
+        windowOptions.onhide = () => invoke(windowOptions.onHideHandlerName, null);
+        windowOptions.onfocus = () => invoke(windowOptions.onFocusHandlerName, null);
+        windowOptions.onblur = () => invoke(windowOptions.onBlurHandlerName, null);
+        windowOptions.onfullscreen = () => invoke(windowOptions.onFullScreenHandlerName, null);
+        windowOptions.onmaximize = () => invoke(windowOptions.onMaximizeHandlerName, null);
+        windowOptions.onminimize = () => invoke(windowOptions.onMinimizeHandlerName, null);
+        windowOptions.onrestore = () => invoke(windowOptions.onRestoreHandlerName);
+        winBoxElement = new WinBox(windowOptions, title);
 
         if (windowOptions.docking) {
             WinBoxDocking.attach(winBoxElement, windowOptions.docking);
@@ -591,17 +570,24 @@ window.WinBoxFullscreen = (() => {
         return win;
     };
 
+    const cleanup = (win) => {
+        const state = win && win.__blazorFullscreen;
+
+        if (!state) return;
+
+        window.removeEventListener("resize", state.resizeHandler);
+        win.__blazorFullscreen = null;
+        win.full = false;
+
+        if (win.g) win.g.classList.remove(FULL_CLASS);
+    };
+
     const exit = (win) => {
         const state = win && win.__blazorFullscreen;
 
         if (!state) return win;
 
-        window.removeEventListener("resize", state.resizeHandler);
-        win.__blazorFullscreen = null;
-
-        if (win.g) win.g.classList.remove(FULL_CLASS);
-        win.full = false;
-
+        cleanup(win);
         applyBounds(win, state.bounds);
 
         if (win.onrestore) {
@@ -669,7 +655,7 @@ window.WinBoxFullscreen = (() => {
             };
         },
         detach: (win) => {
-            if (win) exit(win);
+            cleanup(win);
         },
         isFullscreen: (win) => !!(win && win.__blazorFullscreen)
     };
