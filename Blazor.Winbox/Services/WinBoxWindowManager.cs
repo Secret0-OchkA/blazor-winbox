@@ -87,7 +87,54 @@ public class WinBoxWindowManager : IWindowManager
         BasicWindowOptions xJsWindowOptions = BasicWindowOptions.CreateCopy(options);
         IJSInProcessRuntime xJsInProcess = (IJSInProcessRuntime)_js;
         IJSObjectReference xJsWindowReference = await xJsInProcess.InvokeAsync<IJSObjectReference>("WinBoxWindowManager.OpenWindow", title, xJsWindowOptions);
-        _windowsJsReferences.Add(Guid.Parse(options.Id), xJsWindowReference as IJSInProcessObjectReference);
+        Guid xWindowId = Guid.Parse(options.Id);
+
+        // The window may have been closed while the javascript side was creating it,
+        // in that case the window would stay orphaned and unreachable from blazor.
+        if (!_windowsBlzrReferences.ContainsKey(xWindowId) || _windowsJsReferences.ContainsKey(xWindowId))
+        {
+            TryCloseJsWindow(xJsWindowReference);
+            await xJsWindowReference.DisposeAsync();
+            return;
+        }
+
+        _windowsJsReferences[xWindowId] = xJsWindowReference as IJSInProcessObjectReference;
+    }
+
+    private static void TryCloseJsWindow(IJSObjectReference jsWindowReference)
+    {
+        if (jsWindowReference is not IJSInProcessObjectReference xInProcessReference)
+        {
+            return;
+        }
+
+        try
+        {
+            xInProcessReference.InvokeVoid("close", true);
+        }
+        catch (JSException)
+        {
+            // the window is being discarded anyway
+        }
+    }
+
+    private static void DisposeJsReference(IJSInProcessObjectReference jsWindowReference)
+    {
+        if (jsWindowReference is null)
+        {
+            return;
+        }
+
+        try
+        {
+            jsWindowReference.Dispose();
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+        catch (ObjectDisposedException)
+        {
+        }
     }
 
     public bool HasJsWindowReference(Guid id)
@@ -102,14 +149,13 @@ public class WinBoxWindowManager : IWindowManager
         if (xWindowReference is not null)
         {
             xWindowReference.Close(result);
-            OnWindowCloseRequested.Invoke(xWindowReference, result);
+            OnWindowCloseRequested?.Invoke(xWindowReference, result);
             _windowsBlzrReferences.Remove(winId);
         }
 
-        _windowsJsReferences.TryGetValue(winId, out IJSInProcessObjectReference xWindowJsReference);
-        if (xWindowJsReference is not null)
+        if (_windowsJsReferences.Remove(winId, out IJSInProcessObjectReference xWindowJsReference))
         {
-            _windowsJsReferences.Remove(winId);
+            DisposeJsReference(xWindowJsReference);
         }
     }
 
@@ -120,15 +166,20 @@ public class WinBoxWindowManager : IWindowManager
         if (xWindowReference is not null)
         {
             xWindowReference.Close(result);
-            OnWindowCloseRequested.Invoke(xWindowReference, result);
+            OnWindowCloseRequested?.Invoke(xWindowReference, result);
             _windowsBlzrReferences.Remove(winId);
         }
         //to close  window in javascript
-        _windowsJsReferences.TryGetValue(winId, out IJSInProcessObjectReference xWindowJsReference);
-        if (xWindowJsReference is not null)
+        if (_windowsJsReferences.Remove(winId, out IJSInProcessObjectReference xWindowJsReference))
         {
-            _windowsJsReferences[winId].InvokeVoid("close", true);
-            _windowsJsReferences.Remove(winId);
+            try
+            {
+                xWindowJsReference?.InvokeVoid("close", true);
+            }
+            finally
+            {
+                DisposeJsReference(xWindowJsReference);
+            }
         }
     }
 
