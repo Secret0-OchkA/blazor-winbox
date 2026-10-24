@@ -95,3 +95,58 @@ void OpenCounter(){
 ```
 
 ![Preview](./Docs/BlazorWinbox.gif)
+
+### Docking windows
+Windows can dock (snap) to each other while they are dragged or resized. When the edge of the moved window gets close to the edge of another window, the window snaps to it and a dashed guide line shows the docking edge.
+
+Docking is disabled by default. Enable it for a single window by assigning `WindowDockingOptions` to `WindowOptions.Docking`:
+
+```c#
+WindowOptions xWindowOptions = new()
+{
+    Width = "400px",
+    Height = "300px",
+    Docking = new WindowDockingOptions()
+};
+
+IWindowReference xWindowReference = WindowManager.Open<Counter>("Counter", windowOptions: xWindowOptions);
+```
+
+To enable docking for every window, assign it to the global options of `WindowProvider`:
+
+```c#
+_GlobalWindowOptions = new GlobalWindowOptions
+{
+    Docking = new WindowDockingOptions()
+};
+```
+
+`WindowDockingOptions` properties:
+
+| Property | Default | Description |
+| --- | --- | --- |
+| `Enabled` | `true` | Enables the docking behavior when the options object is assigned |
+| `SnapDistance` | `10` | Max distance (px) between window edges at which the window snaps |
+| `ShowGuides` | `true` | Shows dashed guide lines at the docked edges |
+| `GuideColor` | light blue | Any css color of the guide lines, e.g. `"#22c55e"` or `"rgba(34, 197, 94, .8)"` |
+| `GuideThickness` | `1` | Thickness of the guide lines in pixels |
+| `Group` | `null` | Windows dock only to windows of the same group, so unrelated window sets can be kept apart |
+
+Docking group example — blue and green windows dock only inside their own group:
+
+```c#
+WindowOptions xBlueOptions = new() { Docking = new WindowDockingOptions { Group = "blue" } };
+WindowOptions xGreenOptions = new()
+{
+    Docking = new WindowDockingOptions { Group = "green", GuideColor = "#22c55e", GuideThickness = 2 }
+};
+```
+
+If you have the `WinBox` instance at hand (e.g. from custom JavaScript), docking can also be changed after the window was created:
+
+```js
+const win = WinBoxWindowManager.OpenWindow(title, windowOptions); // or your own WinBox instance
+WinBoxDocking.attach(win, { snapDistance: 20, group: "blue" });   // (re)enable with new settings
+WinBoxDocking.detach(win);                                        // disable
+```
+
