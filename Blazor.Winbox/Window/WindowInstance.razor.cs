@@ -4,7 +4,7 @@ using System.ComponentModel;
 
 namespace BlazorWinbox;
 
-public partial class WindowInstance
+public partial class WindowInstance : IDisposable
 {
     [Inject] public IWindowManager WindowManager { get; set; }
     [Parameter] public Guid Id { get; set; }
@@ -14,9 +14,33 @@ public partial class WindowInstance
     [CascadingParameter] public GlobalWindowOptions GlobalWindowOptions { get; set; }
 
     WindowOptions _Options;
+    private DotNetObjectReference<WindowInstance> _InstanceReference;
+    private bool _IsDisposed;
+
     protected override void OnInitialized()
     {
         ConfigureInstance();
+    }
+
+    /// <summary>
+    /// Releases the reference that keeps this component alive on the javascript side,
+    /// otherwise every closed window stays in memory forever.
+    /// </summary>
+    public void Dispose()
+    {
+        if (_IsDisposed)
+        {
+            return;
+        }
+        _IsDisposed = true;
+
+        if (Options is not null && ReferenceEquals(Options.BlazorWindowInstanceReference, _InstanceReference))
+        {
+            Options.BlazorWindowInstanceReference = null;
+        }
+
+        _InstanceReference?.Dispose();
+        _InstanceReference = null;
     }
 
     private void ConfigureInstance()
@@ -45,7 +69,8 @@ public partial class WindowInstance
         SetDocking();
         Options.Id = Id.ToString("N");
         Options.XCloseHandlerName = nameof(OnXClose);
-        Options.BlazorWindowInstanceReference = DotNetObjectReference.Create(this);
+        _InstanceReference = DotNetObjectReference.Create(this);
+        Options.BlazorWindowInstanceReference = _InstanceReference;
         Options.OnCloseHandlerName = nameof(CloseAsync);
 
         Options.OnMoveHandlerName = nameof(OnMove);
