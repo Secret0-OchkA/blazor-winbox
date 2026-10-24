@@ -106,6 +106,13 @@ public class GlobalWindowOptions
     /// </summary>
     public bool? AutoSize { get; set; }
 
+    // docking:
+    /// <summary>
+    /// Enables docking (snapping) of the window to other windows while it is moved or resized.
+    /// <para>Assign an instance of <see cref="WindowDockingOptions"/> to enable the feature. Default is null (disabled)</para>
+    /// </summary>
+    public WindowDockingOptions Docking { get; set; }
+
     // position:
     /// <summary>
     /// Set the initial position of the window (supports: "right", "center", units "px" and "%").

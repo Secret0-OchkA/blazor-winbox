@@ -2,109 +2,61 @@
 @using Blazor.Winbox.Wasm.Windows
 
 <PageTitle>Docking-Windows Usage</PageTitle>
-<div class="input-group m-2" style="width: 349px; background-color:aqua;">
-    <button @onclick="@OpenWindow" class="btn btn-outline-secondary" type="button" id="button-open">Open Window</button>
 
-    <div id="dock-line-top" class="dock-line horizontal"></div>
-    <div id="dock-line-bottom" class="dock-line horizontal"></div>
-    <div id="dock-line-left" class="dock-line vertical"></div>
-    <div id="dock-line-right" class="dock-line vertical"></div>
+<div class="d-flex flex-wrap align-items-center gap-2 m-2">
+    <button class="btn btn-primary" type="button" @onclick="OpenBlueWindow">Open blue window</button>
+    <button class="btn btn-success" type="button" @onclick="OpenGreenWindow">Open green window</button>
+    <button class="btn btn-outline-light" type="button" @onclick="OpenThreeBlueWindows">Open three blue windows</button>
+    <span class="text-white-50">
+        Drag or resize a window close to another window to dock it. Windows dock only to windows of the same group.
+    </span>
 </div>
 
-<style>
-    .dock-line {
-    position: absolute;
-    background: rgba(0, 150, 255, 0.5);
-    z-index: 9999;
-    display: none;
-    }
-
-    .dock-line.vertical {
-    width: 2px;
-    height: 100vh;
-    }
-
-    .dock-line.horizontal {
-    height: 2px;
-    width: 100vw;
-    }
-</style>
-
 @code {
-    [Inject] public IWindowManager windowManager { get; set; }
-    [Inject] IJSRuntime jSRuntime { get; init; } = null!;
+    private const string BlueGroup = "blue";
+    private const string GreenGroup = "green";
 
-    List<IWindowReference> windows = new();
+    [Inject] public IWindowManager WindowManager { get; set; }
 
-    private async Task OpenWindow()
+    private int _openedWindows;
+
+    private void OpenBlueWindow()
     {
-        WindowOptions xWindowOptions = new() { Height = "400px", Width = "350px", Icon = "./HITIcon.png" };
-
-        var parameters = new WindowParameters();
-        //parameters.Add("OnMoveUp", (w,x,y) => {});
-
-        var windowRef = windowManager.Open<InfoWindow>("info window", parameters, xWindowOptions);
-
-        windowManager.Blur(windowRef.Id, true);
-        windows.Add(windowRef);
+        OpenWindow(BlueGroup, new WindowDockingOptions { Group = BlueGroup });
     }
 
-    public async Task HandleMoveAsync(WindowInstance window, long x, long y)
+    private void OpenGreenWindow()
     {
-        Console.WriteLine("hello");
-        var movingWindow = windows.FirstOrDefault(w => w.Id == window.Id);
-        if (movingWindow == null) return;
-
-        var snapDistance = 10.0;
-        double? snappedX = null, snappedY = null;
-
-        foreach (var otherWin in windows)
+        OpenWindow(GreenGroup, new WindowDockingOptions
         {
-            if (otherWin == movingWindow) continue;
-            var rect = await jSRuntime.InvokeAsync<BoundingClientRect>("GetBoundingClientRectPort", otherWin);
-            var winRect = await jSRuntime.InvokeAsync<BoundingClientRect>("GetBoundingClientRectPort", movingWindow);
+            Group = GreenGroup,
+            GuideColor = "#22c55e",
+            GuideThickness = 2
+        });
+    }
 
-            // if (Math.Abs(winRect.Right - rect.Left) < snapDistance)
-            // {
-            //     snappedX = rect.Left - winRect.Width;
-            //     await Js.InvokeVoidAsync("winboxDock.showDockLine", "right", rect.Left);
-            // }
-            // if (Math.Abs(winRect.Left - rect.Right) < snapDistance)
-            // {
-            //     snappedX = rect.Right;
-            //     await JS.InvokeVoidAsync("winboxDock.showDockLine", "left", rect.Right);
-            // }
-            // if (Math.Abs(winRect.Bottom - rect.Top) < snapDistance)
-            // {
-            //     snappedY = rect.Top - winRect.Height;
-            //     await JS.InvokeVoidAsync("winboxDock.showDockLine", "bottom", rect.Top);
-            // }
-            // if (Math.Abs(winRect.Top - rect.Bottom) < snapDistance)
-            // {
-            //     snappedY = rect.Bottom;
-            //     await JS.InvokeVoidAsync("winboxDock.showDockLine", "top", rect.Bottom);
-            // }
-        }
-
-        if (snappedX.HasValue || snappedY.HasValue)
+    private void OpenThreeBlueWindows()
+    {
+        for (int i = 0; i < 3; i++)
         {
-            //await movingWindow.MoveAsync(snappedX ?? x, snappedY ?? y);
-        }
-        else
-        {
-            //await JS.InvokeVoidAsync("winboxDock.hideDockLines");
+            OpenBlueWindow();
         }
     }
 
-    public class BoundingClientRect
+    private void OpenWindow(string group, WindowDockingOptions dockingOptions)
     {
-        public double X { get; set; }
-        public double Y { get; set; }
-        public double Width { get; set; }
-        public double Height { get; set; }
-        public double Top { get; set; }
-        public double Right { get; set; }
-        public double Bottom { get; set; }
-        public double Left { get; set; }
+        _openedWindows++;
+
+        WindowOptions xWindowOptions = new()
+        {
+            Width = "380px",
+            Height = "320px",
+            X = $"{120 + (_openedWindows % 5) * 40}px",
+            Y = $"{110 + (_openedWindows % 5) * 40}px",
+            Icon = "./HITIcon.png",
+            Docking = dockingOptions
+        };
+
+        WindowManager.Open<InfoWindow>($"{group} window {_openedWindows}", null, xWindowOptions);
     }
 }

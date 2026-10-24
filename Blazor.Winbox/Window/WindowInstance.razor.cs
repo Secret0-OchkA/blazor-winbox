@@ -42,6 +42,7 @@ public partial class WindowInstance
         SetBottom();
         SetRight();
         SetLeft();
+        SetDocking();
         Options.Id = Id.ToString("N");
         Options.XCloseHandlerName = nameof(OnXClose);
         Options.BlazorWindowInstanceReference = DotNetObjectReference.Create(this);
@@ -202,6 +203,18 @@ public partial class WindowInstance
         else if (!string.IsNullOrEmpty(GlobalWindowOptions.MaxHeight))
         {
             Options.MaxHeight = GlobalWindowOptions.MaxHeight;
+        }
+    }
+
+    private void SetDocking()
+    {
+        if (Options.Docking is not null)
+        {
+            return;
+        }
+        else if (GlobalWindowOptions.Docking is not null)
+        {
+            Options.Docking = GlobalWindowOptions.Docking;
         }
     }
 
