@@ -1,0 +1,68 @@
+﻿<Window>
+    <div class="p-2">
+        <p class="mb-1">This window has no built-in controls — only custom ones.</p>
+        <p class="mb-3 text-muted">Clicks: @_clicks | Last action: @_lastAction</p>
+
+        <button class="btn btn-outline-secondary btn-sm" @onclick="CountFromBody">Count from the body</button>
+    </div>
+</Window>
+
+@code {
+    [CascadingParameter] public WindowInstance WindowInstance { get; set; }
+
+    private int _clicks;
+    private string _lastAction = "none";
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        WindowInstance.SetToolbarButtons(new List<ToolbarButton>
+        {
+            new()
+            {
+                Id = "star",
+                Tooltip = "Custom action",
+                IconClass = "oi oi-star",
+                Color = "#fde68a",
+                OnClick = () =>
+                {
+                    _clicks++;
+                    _lastAction = "star";
+                    StateHasChanged();
+                    return Task.CompletedTask;
+                }
+            },
+            new()
+            {
+                Id = "fullscreen",
+                Tooltip = "Toggle fullscreen",
+                IconClass = "oi oi-fullscreen-enter",
+                OnClick = async () =>
+                {
+                    await WindowInstance.Fullscreen();
+                    _lastAction = "fullscreen";
+                    StateHasChanged();
+                }
+            },
+            new()
+            {
+                Id = "close",
+                Tooltip = "Close window",
+                IconClass = "oi oi-x",
+                Color = "#fecaca",
+                OnClick = async () =>
+                {
+                    _lastAction = "close";
+                    await WindowInstance.CloseAsync();
+                }
+            }
+        });
+    }
+
+    private void CountFromBody()
+    {
+        _clicks++;
+        _lastAction = "body";
+    }
+}

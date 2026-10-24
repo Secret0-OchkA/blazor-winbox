@@ -69,6 +69,36 @@ public class GlobalWindowOptions
     public string Border { get; set; }
     //public string Icon { get; set; }
 
+    // toolbar:
+    /// <summary>
+    /// Custom buttons displayed in the window title bar next to the built-in controls (minimize, maximize, fullscreen and close).
+    /// <para>Set it on the window options to add buttons to a single window, or on the global options of
+    /// <see cref="WindowProvider"/> to add them to every window.</para>
+    /// </summary>
+    public List<ToolbarButton> Toolbar { get; set; }
+
+    /// <summary>
+    /// Customizes the built-in minimize control (icon, tooltip, colors, visibility).
+    /// <para>Set it on the window options to customize a single window, or on the global options of
+    /// <see cref="WindowProvider"/> to customize every window.</para>
+    /// </summary>
+    public WindowControlButton Minimize { get; set; }
+
+    /// <summary>
+    /// Customizes the built-in maximize control (icon, tooltip, colors, visibility).
+    /// </summary>
+    public WindowControlButton Maximize { get; set; }
+
+    /// <summary>
+    /// Customizes the built-in fullscreen control (icon, tooltip, colors, visibility).
+    /// </summary>
+    public WindowControlButton Fullscreen { get; set; }
+
+    /// <summary>
+    /// Customizes the built-in close control (icon, tooltip, colors, visibility).
+    /// </summary>
+    public WindowControlButton Close { get; set; }
+
     // initial state:
     /// <summary>
     /// Shows the window as modal.

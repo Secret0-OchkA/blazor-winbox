@@ -1,0 +1,108 @@
+﻿@page "/toolbar"
+@using Blazor.Winbox.Wasm.Windows
+
+<PageTitle>Custom Toolbar Usage</PageTitle>
+
+<div class="d-flex flex-wrap align-items-center gap-2 m-2">
+    <button class="btn btn-primary" type="button" @onclick="OpenToolbarWindow">Open window with toolbar buttons</button>
+    <button class="btn btn-outline-light" type="button" @onclick="OpenWindowWithOptionsToolbar">Open window with options toolbar</button>
+    <button class="btn btn-outline-info" type="button" @onclick="OpenWindowWithCustomButtonsOnly">Open window with custom buttons only</button>
+    <span class="text-white-50">
+        Toolbar buttons support icons (image url or icon font classes), tooltips, colors and click actions.
+        Built-in controls can be hidden or customized, so a window can use custom buttons only.
+    </span>
+</div>
+
+@code {
+    [Inject] public IWindowManager WindowManager { get; set; }
+
+    private int _openedWindows;
+
+    private void OpenToolbarWindow()
+    {
+        _openedWindows++;
+
+        WindowOptions xWindowOptions = new()
+        {
+            Width = "480px",
+            Height = "320px",
+            X = $"{140 + (_openedWindows % 5) * 30}px",
+            Y = $"{120 + (_openedWindows % 5) * 30}px",
+            Icon = "./HITIcon.png"
+        };
+
+        WindowManager.Open<ToolbarWindow>("Toolbar window", null, xWindowOptions);
+    }
+
+    private void OpenWindowWithOptionsToolbar()
+    {
+        _openedWindows++;
+
+        WindowOptions xWindowOptions = new()
+        {
+            Width = "420px",
+            Height = "260px",
+            X = $"{180 + (_openedWindows % 5) * 30}px",
+            Y = $"{150 + (_openedWindows % 5) * 30}px",
+            Icon = "./HITIcon.png",
+            Minimize = new WindowControlButton
+            {
+                Tooltip = "Collapse to the taskbar",
+                Color = "#fca5a5"
+            },
+            Close = new WindowControlButton
+            {
+                Tooltip = "Close this window",
+                IconClass = "oi oi-x",
+                Color = "#fecaca"
+            },
+            Toolbar = new List<ToolbarButton>
+            {
+                new()
+                {
+                    Tooltip = "Say hello",
+                    IconClass = "oi oi-bell",
+                    Color = "#ffd166",
+                    OnClick = () =>
+                    {
+                        Console.WriteLine("Toolbar button clicked");
+                        return Task.CompletedTask;
+                    }
+                },
+                new()
+                {
+                    Tooltip = "Image icon",
+                    Icon = "./HITIcon.png",
+                    IconSize = "16px 16px",
+                    OnClick = () =>
+                    {
+                        Console.WriteLine("Image toolbar button clicked");
+                        return Task.CompletedTask;
+                    }
+                }
+            }
+        };
+
+        WindowManager.Open<InfoWindow>("Window with options toolbar", null, xWindowOptions);
+    }
+
+    private void OpenWindowWithCustomButtonsOnly()
+    {
+        _openedWindows++;
+
+        WindowOptions xWindowOptions = new()
+        {
+            Width = "460px",
+            Height = "240px",
+            X = $"{220 + (_openedWindows % 5) * 30}px",
+            Y = $"{180 + (_openedWindows % 5) * 30}px",
+            Icon = "./HITIcon.png",
+            Minimize = new WindowControlButton { Visible = false },
+            Maximize = new WindowControlButton { Visible = false },
+            Fullscreen = new WindowControlButton { Visible = false },
+            Close = new WindowControlButton { Visible = false }
+        };
+
+        WindowManager.Open<CustomOnlyToolbarWindow>("Custom buttons only", null, xWindowOptions);
+    }
+}

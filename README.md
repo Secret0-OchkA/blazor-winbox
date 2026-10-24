@@ -150,3 +150,140 @@ WinBoxDocking.attach(win, { snapDistance: 20, group: "blue" });   // (re)enable 
 WinBoxDocking.detach(win);                                        // disable
 ```
 
+### Fullscreen
+Calling `WindowInstance.Fullscreen()`, `IWindowManager.Fullscreen(id, state)` or clicking the built-in fullscreen button expands the window to the whole viewport. The title bar and the toolbar stay visible and the window content is not re-mounted, so it keeps working exactly as in the windowed state.
+
+```c#
+await windowInstance.Fullscreen(true);   // enter
+await windowInstance.Fullscreen(false);  // leave
+await windowInstance.Fullscreen();       // toggle
+```
+
+* The previous position and size are restored when fullscreen is left.
+* `Top`/`Bottom`/`Left`/`Right` viewport limits are respected.
+* `Maximize`, `Minimize`, `Restore` and `Close` leave fullscreen first.
+* `OnFullScreen` is triggered once when the window enters fullscreen, `OnRestore` — once when it returns to the windowed state.
+
+### Custom toolbar buttons
+Besides the built-in minimize, maximize, fullscreen and close buttons, a window can display custom title bar buttons with their own icons and click actions.
+
+Assign a list of `ToolbarButton` to `WindowOptions.Toolbar` to add buttons to a single window, or to the global options of `WindowProvider` to add them to every window (instance buttons are merged with the global ones, a button with the same `Id` overrides the global button).
+
+```c#
+WindowOptions xWindowOptions = new()
+{
+    Width = "480px",
+    Height = "320px",
+    Toolbar = new List<ToolbarButton>
+    {
+        new()
+        {
+            Id = "refresh",
+            Tooltip = "Refresh data",
+            IconClass = "oi oi-loop-circular",   // icon font / css classes
+            OnClick = async () => await LoadDataAsync()
+        },
+        new()
+        {
+            Tooltip = "Company logo",            // icon image (svg, png, data uri, ...)
+            Icon = "./logo.png",
+            IconSize = "18px 18px",
+            OnClick = () => { OpenSite(); return Task.CompletedTask; }
+        },
+        new()
+        {
+            Tooltip = "Unavailable action",
+            IconClass = "oi oi-ban",
+            Disabled = true
+        }
+    }
+};
+
+WindowManager.Open<MyWindow>("My window", windowOptions: xWindowOptions);
+```
+
+Built-in buttons are customizable in the same way — icon, tooltip, colors, extra css, visibility and disabled state. Their built-in behavior (minimize, maximize, fullscreen, close) stays the same:
+
+```c#
+WindowOptions xWindowOptions = new()
+{
+    Minimize = new WindowControlButton { Tooltip = "Collapse", Icon = "./icons/minimize.svg" },
+    Maximize = new WindowControlButton { IconClass = "oi oi-resize-both", Color = "#bae6fd" },
+    Fullscreen = new WindowControlButton { Visible = false },   // hide the control
+    Close = new WindowControlButton { Tooltip = "Close", Disabled = true }
+};
+```
+
+`WindowControlButton` supports `Tooltip`, `Icon`, `IconClass`, `IconSize`, `CssClass`, `Background`, `Color`, `Style`, `Visible` and `Disabled`. The same objects can be assigned to the global options of `WindowProvider`; window level values override the global ones property by property.
+
+To hide all built-in controls and keep custom buttons only, set `Visible = false` for each of them:
+
+```c#
+WindowOptions xWindowOptions = new()
+{
+    Minimize = new WindowControlButton { Visible = false },
+    Maximize = new WindowControlButton { Visible = false },
+    Fullscreen = new WindowControlButton { Visible = false },
+    Close = new WindowControlButton { Visible = false },
+    Toolbar = new List<ToolbarButton>
+    {
+        new() { Tooltip = "Close", IconClass = "oi oi-x", OnClick = () => CloseWindowAsync() }
+    }
+};
+```
+
+Controls can also be hidden with the WinBox control classes (`Class = "no-min no-max no-full no-close"`), but keep in mind that a hidden close button can only be replaced by your own custom button which closes the window (e.g. `WindowInstance.CloseAsync()` or `IWindowManager.Close(id, WindowResult.Cancel())`).
+
+`ToolbarButton` properties:
+
+| Property | Description |
+| --- | --- |
+| `Id` | Unique button id. Generated automatically when not set. Used to update or remove the button later |
+| `Tooltip` | Tooltip text (also used as `aria-label`) |
+| `Icon` | Icon image url rendered as the button background |
+| `IconClass` | Css classes of an icon font element rendered inside the button, e.g. `"oi oi-plus"` |
+| `IconSize` | Css size of `Icon`, default is `16px 16px` |
+| `CssClass` | Extra css classes of the button element |
+| `Background` / `Color` | Background and foreground (icon) colors, any css color |
+| `Style` | Raw css declarations, e.g. `"border-radius: 4px;"` |
+| `Visible` | Hides the button when `false`. Default is `true` |
+| `Disabled` | Ignores clicks when `true`. Default is `false` |
+| `Index` | Zero-based position inside the controls container (`0` is the leftmost position next to the title). When not set, buttons are placed in declaration order starting from the leftmost position |
+| `OnClick` | Action invoked when the button is clicked |
+
+Buttons can also be changed after the window was opened. Get the `WindowInstance` from the window content (cascading parameter) or from the `Window` component reference:
+
+```c#
+// replace all buttons
+WindowInstance.SetToolbarButtons(buttons);
+
+// add a button, returns a generated Id on the button object
+WindowInstance.AddToolbarButton(new ToolbarButton
+{
+    Tooltip = "Pin",
+    IconClass = "oi oi-pin",
+    OnClick = () => { Pin(); return Task.CompletedTask; }
+});
+
+// change an existing button (its click action is kept when OnClick is null)
+WindowInstance.UpdateToolbarButton(new ToolbarButton
+{
+    Id = "pin",
+    Tooltip = "Unpin",
+    IconClass = "oi oi-pin",
+    Disabled = true
+});
+
+// remove a button by id
+WindowInstance.RemoveToolbarButton("pin");
+
+// customize a built-in control at runtime (null restores the default look)
+WindowInstance.UpdateControlButton(WindowControlKind.Close, new WindowControlButton
+{
+    Tooltip = "Close is disabled",
+    Disabled = true
+});
+```
+
+The same operations are exposed by `IWindowManager`: `AddToolbarButton`, `UpdateToolbarButton`, `RemoveToolbarButton`, `SetToolbarButtons` and `UpdateControlButton` take the window id as the first argument.
+

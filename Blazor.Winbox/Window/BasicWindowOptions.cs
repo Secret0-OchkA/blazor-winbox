@@ -66,6 +66,10 @@ public class BasicWindowOptions : GlobalWindowOptions
     [EditorBrowsable(EditorBrowsableState.Never)]
     public string OnCloseHandlerName { get; set; }
 
+    [Obsolete("Do not use this in your code, it is allowed to be used internally by Window")]
+    [EditorBrowsable(EditorBrowsableState.Never)]
+    public string OnToolbarButtonClickHandlerName { get; set; }
+
     public string OnMoveHandlerName { get; set; }
     public string OnShowHandlerName { get; set; }
     public string OnHideHandlerName { get; set; }
