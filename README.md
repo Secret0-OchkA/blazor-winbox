@@ -151,7 +151,7 @@ WinBoxDocking.detach(win);                                        // disable
 ```
 
 ### Fullscreen
-Calling `WindowInstance.Fullscreen()`, `IWindowManager.Fullscreen(id, state)` or clicking the built-in fullscreen button expands the window to the whole viewport. The title bar and the toolbar stay visible and the window content is not re-mounted, so it keeps working exactly as in the windowed state.
+Calling `WindowInstance.Fullscreen()`, `IWindowManager.Fullscreen(id, state)` or clicking the built-in fullscreen button puts the window into the browser fullscreen (the Fullscreen API), so the browser toolbar disappears and the window fills the whole screen. The title bar and the toolbar of the window stay visible and the window content is not re-mounted, so it keeps working exactly as in the windowed state.
 
 ```c#
 await windowInstance.Fullscreen(true);   // enter
@@ -160,7 +160,8 @@ await windowInstance.Fullscreen();       // toggle
 ```
 
 * The previous position and size are restored when fullscreen is left.
-* `Top`/`Bottom`/`Left`/`Right` viewport limits are respected.
+* Leaving fullscreen with `Esc` or by another browser action is synchronized back to Blazor — the window returns to its previous bounds and `OnRestore` is triggered.
+* When the browser refuses the native request (a programmatic call without a user gesture, an iframe without the `allow="fullscreen"` permission, ...) the window is expanded to the viewport instead and the `Top`/`Bottom`/`Left`/`Right` limits are respected.
 * `Maximize`, `Minimize`, `Restore` and `Close` leave fullscreen first.
 * `OnFullScreen` is triggered once when the window enters fullscreen, `OnRestore` — once when it returns to the windowed state.
 

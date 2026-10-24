@@ -37,7 +37,8 @@ public interface IWindowManager
     void CloseBlzr(Guid winId, WindowResult result);
     public void Close(Guid winId, WindowResult result);
     /// <summary>
-    /// Expands the window to the viewport while the title bar and toolbar stay visible.
+    /// Puts the window into the browser fullscreen while its title bar and toolbar stay visible.
+    /// <para>When the browser refuses the native fullscreen request the window is expanded to the viewport instead.</para>
     /// </summary>
     /// <param name="winId">Id of the window</param>
     /// <param name="state">true to enter fullscreen, false to leave it, null to toggle it</param>

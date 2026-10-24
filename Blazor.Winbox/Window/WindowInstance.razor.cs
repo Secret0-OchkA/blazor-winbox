@@ -470,7 +470,8 @@ public partial class WindowInstance : IDisposable
     }
 
     /// <summary>
-    /// Set the fullscreen state of a window. The window is expanded to the viewport while the title bar and toolbar stay visible.
+    /// Puts the window into the browser fullscreen while its title bar and toolbar stay visible.
+    /// <para>When the browser refuses the native fullscreen request (a programmatic call without a user gesture, an iframe without the allow="fullscreen" permission, ...) the window is expanded to the viewport instead.</para>
     /// <para>The <see cref="WindowOptions.OnFullScreen"/> callback is triggered by the window itself once the state changed.</para>
     /// </summary>
     /// <param name="state">true to enter fullscreen, false to leave it, null to toggle it</param>

@@ -514,13 +514,35 @@ window.WinBoxDocking = (() => {
 
 window.WinBoxFullscreen = (() => {
     const FULL_CLASS = "blazor-winbox-fullscreen";
+    const NATIVE_MODE = "native";
+    const VIEWPORT_MODE = "viewport";
+    const REQUEST_METHODS = ["requestFullscreen", "webkitRequestFullscreen", "mozRequestFullScreen", "msRequestFullscreen"];
+    const EXIT_METHODS = ["exitFullscreen", "webkitExitFullscreen", "mozCancelFullScreen", "msExitFullscreen"];
+    const CHANGE_EVENTS = ["fullscreenchange", "webkitfullscreenchange", "mozfullscreenchange", "MSFullscreenChange"];
+    const ERROR_EVENTS = ["fullscreenerror", "webkitfullscreenerror", "mozfullscreenerror", "MSFullscreenError"];
+
+    const methodOf = (target, names) => names.find((name) => target && typeof target[name] === "function") || null;
+
+    const nativeSupported = () => {
+        if (typeof document.fullscreenEnabled === "boolean") return document.fullscreenEnabled;
+        if (typeof document.webkitFullscreenEnabled === "boolean") return document.webkitFullscreenEnabled;
+        if (typeof document.mozFullScreenEnabled === "boolean") return document.mozFullScreenEnabled;
+        return false;
+    };
+
+    const nativeElement = () =>
+        document.fullscreenElement ||
+        document.webkitFullscreenElement ||
+        document.mozFullScreenElement ||
+        document.msFullscreenElement ||
+        null;
 
     const viewportSize = () => ({
         width: document.documentElement.clientWidth || window.innerWidth,
         height: document.documentElement.clientHeight || window.innerHeight
     });
 
-    const fullscreenBounds = (win) => {
+    const viewportBounds = (win) => {
         const left = win.left || 0;
         const top = win.top || 0;
         const right = win.right || 0;
@@ -540,6 +562,95 @@ window.WinBoxFullscreen = (() => {
         win.resize(bounds.width, bounds.height);
     };
 
+    const requestNative = (element) => {
+        if (!nativeSupported()) return null;
+
+        const method = methodOf(element, REQUEST_METHODS);
+        if (!method) return null;
+
+        try {
+            const result = element[method]();
+            return result && typeof result.then === "function" ? result : Promise.resolve();
+        } catch (error) {
+            return Promise.reject(error);
+        }
+    };
+
+    const releaseNative = () => {
+        const method = methodOf(document, EXIT_METHODS);
+        if (!method) return;
+
+        try {
+            const result = document[method]();
+            if (result && typeof result.catch === "function") {
+                result.catch(() => { });
+            }
+        } catch (error) {
+            // the browser already left fullscreen
+        }
+    };
+
+    const stopListening = (state) => {
+        if (state.resizeHandler) {
+            window.removeEventListener("resize", state.resizeHandler);
+            state.resizeHandler = null;
+        }
+
+        CHANGE_EVENTS.forEach((eventName) => document.removeEventListener(eventName, state.changeHandler));
+        ERROR_EVENTS.forEach((eventName) => document.removeEventListener(eventName, state.errorHandler));
+    };
+
+    const leave = (win, restoreBounds) => {
+        const state = win && win.__blazorFullscreen;
+        if (!state) return null;
+
+        stopListening(state);
+        win.__blazorFullscreen = null;
+        win.full = false;
+
+        if (win.g) win.g.classList.remove(FULL_CLASS);
+        if (restoreBounds) applyBounds(win, state.bounds);
+
+        return state;
+    };
+
+    const exit = (win) => {
+        const state = win && win.__blazorFullscreen;
+        if (!state) return win;
+
+        const wasNative = state.mode === NATIVE_MODE;
+        leave(win, true);
+
+        if (wasNative && nativeElement() === win.g) {
+            releaseNative();
+        }
+
+        if (win.onrestore) win.onrestore();
+
+        return win;
+    };
+
+    // the browser leaves fullscreen on its own on Esc, on browser ui actions
+    // and when a nested element (a video for example) asks for it
+    const syncWithBrowser = (win) => {
+        const state = win && win.__blazorFullscreen;
+        if (!state) return;
+
+        const element = nativeElement();
+
+        if (element === win.g) {
+            state.mode = NATIVE_MODE;
+            state.pending = false;
+            return;
+        }
+
+        if (element && win.g && win.g.contains(element)) return;
+
+        if (state.mode === NATIVE_MODE || (state.pending && !element)) {
+            exit(win);
+        }
+    };
+
     const enter = (win) => {
         if (!win || !win.g || win.__blazorFullscreen) return win;
 
@@ -547,53 +658,62 @@ window.WinBoxFullscreen = (() => {
             win.restore();
         }
 
-        const bounds = {
-            x: win.x,
-            y: win.y,
-            width: win.width,
-            height: win.height
+        const state = {
+            bounds: { x: win.x, y: win.y, width: win.width, height: win.height },
+            mode: VIEWPORT_MODE,
+            pending: true,
+            resizeHandler: null,
+            changeHandler: null,
+            errorHandler: null
         };
-        const resizeHandler = () => applyBounds(win, fullscreenBounds(win));
 
-        win.__blazorFullscreen = { bounds, resizeHandler };
-
+        win.__blazorFullscreen = state;
         win.focus();
         win.g.classList.add(FULL_CLASS);
         win.full = true;
 
-        applyBounds(win, fullscreenBounds(win));
-        window.addEventListener("resize", win.__blazorFullscreen.resizeHandler);
+        // the window fills the viewport right away, so it stays usable when the browser refuses the
+        // native request (programmatic call without a user gesture, iframe without permission, ...)
+        applyBounds(win, viewportBounds(win));
+        state.resizeHandler = () => applyBounds(win, viewportBounds(win));
+        window.addEventListener("resize", state.resizeHandler);
 
-        if (win.onfullscreen) {
-            win.onfullscreen();
+        state.changeHandler = () => syncWithBrowser(win);
+        CHANGE_EVENTS.forEach((eventName) => document.addEventListener(eventName, state.changeHandler));
+
+        // browsers with the unprefixed api reject the request through the promise,
+        // the legacy ones only fire the error event
+        state.errorHandler = () => {
+            state.pending = false;
+        };
+        ERROR_EVENTS.forEach((eventName) => document.addEventListener(eventName, state.errorHandler));
+
+        const notifyFullscreen = () => {
+            if (win.onfullscreen) win.onfullscreen();
+        };
+
+        const request = requestNative(win.g);
+        if (!request) {
+            state.pending = false;
+            notifyFullscreen();
+            return win;
         }
 
-        return win;
-    };
+        request.then(() => {
+            if (win.__blazorFullscreen !== state) return;
 
-    const cleanup = (win) => {
-        const state = win && win.__blazorFullscreen;
+            state.pending = false;
+            if (nativeElement() === win.g) {
+                state.mode = NATIVE_MODE;
+            }
 
-        if (!state) return;
+            notifyFullscreen();
+        }, () => {
+            if (win.__blazorFullscreen !== state) return;
 
-        window.removeEventListener("resize", state.resizeHandler);
-        win.__blazorFullscreen = null;
-        win.full = false;
-
-        if (win.g) win.g.classList.remove(FULL_CLASS);
-    };
-
-    const exit = (win) => {
-        const state = win && win.__blazorFullscreen;
-
-        if (!state) return win;
-
-        cleanup(win);
-        applyBounds(win, state.bounds);
-
-        if (win.onrestore) {
-            win.onrestore();
-        }
+            state.pending = false;
+            notifyFullscreen();
+        });
 
         return win;
     };
@@ -656,7 +776,15 @@ window.WinBoxFullscreen = (() => {
             };
         },
         detach: (win) => {
-            cleanup(win);
+            const state = win && win.__blazorFullscreen;
+            if (!state) return;
+
+            const wasNative = state.mode === NATIVE_MODE;
+            leave(win, false);
+
+            if (wasNative && nativeElement() === win.g) {
+                releaseNative();
+            }
         },
         isFullscreen: (win) => !!(win && win.__blazorFullscreen)
     };
