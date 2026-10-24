@@ -4,7 +4,7 @@
     <Nullable>disable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
-    <Version>0.2.14</Version>
+    <Version>0.2.15</Version>
     <Authors>Tameem Habash</Authors>
     <Company>HIT</Company>
     <Description>Blazor Multiple Windows Library that wraps winbox.js in Blazor components
@@ -17,7 +17,7 @@
     <RepositoryType>git</RepositoryType>
     <PackageTags>blazor multi window multiple windows winbox wasm client side</PackageTags>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
-    <PackageReleaseNotes>Removed the internal members of BasicWindowOptions (Mount, handler names and the dotnet object reference) so window internals are no longer part of the public API. Added custom window toolbar buttons and customization of the built-in controls (Toolbar, Minimize, Maximize, Fullscreen, Close).</PackageReleaseNotes>
+    <PackageReleaseNotes>Fullscreen now uses the browser Fullscreen API: the window fills the whole screen while its title bar and toolbar stay visible and its content is not re-mounted. Leaving fullscreen with Esc is synchronized back to Blazor and restores the previous bounds. When the browser refuses the native request (a programmatic call without a user gesture, an iframe without the allow="fullscreen" permission, ...) the window is expanded to the viewport instead and the viewport limits are respected.</PackageReleaseNotes>
     <RootNamespace>BlazorWinbox</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
