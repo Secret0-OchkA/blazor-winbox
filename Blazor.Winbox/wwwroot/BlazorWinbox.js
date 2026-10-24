@@ -23,6 +23,8 @@
                 // the window is destroyed right after this callback, release everything it holds
                 closed = true;
                 WinBoxDocking.detach(winBoxElement);
+                WinBoxFullscreen.detach(winBoxElement);
+                WinBoxToolbar.detach(winBoxElement);
                 invoke("OnXClose");
                 return false;
             } else {
@@ -47,6 +49,9 @@
         if (windowOptions.docking) {
             WinBoxDocking.attach(winBoxElement, windowOptions.docking);
         }
+
+        WinBoxFullscreen.attach(winBoxElement);
+        WinBoxToolbar.attach(winBoxElement, windowOptions, componentRef);
 
         return winBoxElement;
     },
@@ -503,6 +508,520 @@ window.WinBoxDocking = (() => {
             if (win && win.__docking) {
                 win.__docking.destroy();
             }
+        }
+    };
+})();
+
+window.WinBoxFullscreen = (() => {
+    const FULL_CLASS = "blazor-winbox-fullscreen";
+
+    const viewportSize = () => ({
+        width: document.documentElement.clientWidth || window.innerWidth,
+        height: document.documentElement.clientHeight || window.innerHeight
+    });
+
+    const fullscreenBounds = (win) => {
+        const left = win.left || 0;
+        const top = win.top || 0;
+        const right = win.right || 0;
+        const bottom = win.bottom || 0;
+        const viewport = viewportSize();
+
+        return {
+            x: left,
+            y: top,
+            width: Math.max(viewport.width - left - right, 0),
+            height: Math.max(viewport.height - top - bottom, 0)
+        };
+    };
+
+    const applyBounds = (win, bounds) => {
+        win.move(bounds.x, bounds.y);
+        win.resize(bounds.width, bounds.height);
+    };
+
+    const enter = (win) => {
+        if (!win || !win.g || win.__blazorFullscreen) return win;
+
+        if (win.min || win.max) {
+            win.restore();
+        }
+
+        const bounds = {
+            x: win.x,
+            y: win.y,
+            width: win.width,
+            height: win.height
+        };
+        const resizeHandler = () => applyBounds(win, fullscreenBounds(win));
+
+        win.__blazorFullscreen = { bounds, resizeHandler };
+
+        win.focus();
+        win.g.classList.add(FULL_CLASS);
+        win.full = true;
+
+        applyBounds(win, fullscreenBounds(win));
+        window.addEventListener("resize", win.__blazorFullscreen.resizeHandler);
+
+        if (win.onfullscreen) {
+            win.onfullscreen();
+        }
+
+        return win;
+    };
+
+    const cleanup = (win) => {
+        const state = win && win.__blazorFullscreen;
+
+        if (!state) return;
+
+        window.removeEventListener("resize", state.resizeHandler);
+        win.__blazorFullscreen = null;
+        win.full = false;
+
+        if (win.g) win.g.classList.remove(FULL_CLASS);
+    };
+
+    const exit = (win) => {
+        const state = win && win.__blazorFullscreen;
+
+        if (!state) return win;
+
+        cleanup(win);
+        applyBounds(win, state.bounds);
+
+        if (win.onrestore) {
+            win.onrestore();
+        }
+
+        return win;
+    };
+
+    return {
+        attach: (win) => {
+            if (!win || !win.g || win.__blazorFullscreenAttached) return;
+
+            win.__blazorFullscreenAttached = true;
+
+            win.blazorIsFullscreen = () => !!win.__blazorFullscreen;
+
+            win.fullscreen = function (state) {
+                const next = state === undefined || state === null ? !this.full : state !== false;
+
+                return next ? enter(this) : exit(this);
+            };
+
+            const restoreWindow = win.restore;
+
+            win.restore = function () {
+                if (this.__blazorFullscreen) {
+                    exit(this);
+
+                    if (this.max || this.min) {
+                        return restoreWindow.call(this);
+                    }
+
+                    return this;
+                }
+
+                return restoreWindow.call(this);
+            };
+
+            const maximizeWindow = win.maximize;
+
+            win.maximize = function (state) {
+                if (this.__blazorFullscreen && state !== false) {
+                    exit(this);
+                }
+
+                return maximizeWindow.call(this, state);
+            };
+
+            const minimizeWindow = win.minimize;
+
+            win.minimize = function (state) {
+                if (this.__blazorFullscreen && state !== false) {
+                    exit(this);
+                }
+
+                return minimizeWindow.call(this, state);
+            };
+
+            const closeWindow = win.close;
+
+            win.close = function (force) {
+                exit(this);
+                return closeWindow.call(this, force);
+            };
+        },
+        detach: (win) => {
+            cleanup(win);
+        },
+        isFullscreen: (win) => !!(win && win.__blazorFullscreen)
+    };
+})();
+
+window.WinBoxToolbar = (() => {
+    const BUTTON_CLASS = "wb-blazor-toolbar-button";
+    const ICON_CLASS = "wb-blazor-toolbar-icon";
+    const HIDDEN_CLASS = "wb-blazor-toolbar-button-hidden";
+    const DISABLED_CLASS = "wb-blazor-toolbar-button-disabled";
+    const ICON_CONTAINER_CLASS = "wb-icon";
+    const DEFAULT_ICON_SIZE = "16px 16px";
+    const CONTROL_CLASS_NAMES = {
+        minimize: "wb-min",
+        maximize: "wb-max",
+        fullscreen: "wb-full",
+        close: "wb-close"
+    };
+    const CONTROL_SELECTOR = ".wb-min,.wb-max,.wb-full,.wb-close";
+
+    let stylesInjected = false;
+
+    const injectStyles = () => {
+        if (stylesInjected) return;
+        stylesInjected = true;
+
+        const style = document.createElement("style");
+        style.id = "blazor-winbox-toolbar-styles";
+        style.textContent =
+            ".wb-blazor-toolbar-button{display:inline-flex!important;align-items:center;justify-content:center;vertical-align:top;background-position:center;background-repeat:no-repeat}" +
+            ".wb-blazor-toolbar-icon{display:inline-block;width:auto!important;height:auto!important;background:none!important;font-size:16px;line-height:1;vertical-align:middle;pointer-events:none}" +
+            ".wb-blazor-toolbar-button-hidden{display:none!important}" +
+            ".wb-blazor-toolbar-button-disabled{opacity:.45;cursor:default}" +
+            ".wb-blazor-toolbar-button:focus-visible{outline:2px solid rgba(255,255,255,.75);outline-offset:-2px}";
+        document.head.appendChild(style);
+    };
+
+    const getIconContainer = (win) => {
+        if (!win || !win.g) return null;
+        return win.g.getElementsByClassName(ICON_CONTAINER_CLASS)[0] || null;
+    };
+
+    const cssUrl = (value) => 'url("' + String(value).replace(/["\\]/g, "\\$&") + '")';
+
+    const hasBackgroundSize = (style) => /(^|;)\s*background-size\s*:/i.test(style || "");
+
+    const buildClassName = (button) => {
+        const classes = [BUTTON_CLASS];
+
+        if (button.cssClass) classes.push(button.cssClass);
+        if (button.visible === false) classes.push(HIDDEN_CLASS);
+        if (button.disabled === true) classes.push(DISABLED_CLASS);
+
+        return classes.join(" ");
+    };
+
+    const applyStyle = (element, button) => {
+        element.removeAttribute("style");
+
+        if (button.style) element.style.cssText = button.style;
+        if (button.color) element.style.color = button.color;
+        if (button.background) element.style.backgroundColor = button.background;
+
+        if (button.icon) {
+            element.style.backgroundImage = cssUrl(button.icon);
+            element.style.backgroundRepeat = "no-repeat";
+            element.style.backgroundPosition = "center";
+
+            if (button.iconSize) {
+                element.style.backgroundSize = button.iconSize;
+            } else if (!hasBackgroundSize(button.style)) {
+                element.style.backgroundSize = DEFAULT_ICON_SIZE;
+            }
+        }
+    };
+
+    const applyIconClass = (element, button) => {
+        let icon = null;
+
+        for (let i = 0; i < element.children.length; i++) {
+            if (element.children[i].classList.contains(ICON_CLASS)) {
+                icon = element.children[i];
+                break;
+            }
+        }
+
+        if (button.iconClass) {
+            if (!icon) {
+                icon = document.createElement("span");
+                icon.className = ICON_CLASS;
+                element.appendChild(icon);
+            }
+
+            icon.className = ICON_CLASS + " " + button.iconClass;
+            icon.setAttribute("aria-hidden", "true");
+        } else if (icon) {
+            icon.remove();
+        }
+    };
+
+    const applyState = (element, button) => {
+        element.className = buildClassName(button);
+
+        if (button.tooltip) {
+            element.setAttribute("title", button.tooltip);
+            element.setAttribute("aria-label", button.tooltip);
+        } else {
+            element.removeAttribute("title");
+            element.removeAttribute("aria-label");
+        }
+
+        element.dataset.blazorToolbarDisabled = button.disabled === true ? "true" : "false";
+
+        if (button.disabled === true) {
+            element.setAttribute("aria-disabled", "true");
+            element.setAttribute("tabindex", "-1");
+        } else {
+            element.removeAttribute("aria-disabled");
+            element.setAttribute("tabindex", "0");
+        }
+
+        applyStyle(element, button);
+        applyIconClass(element, button);
+    };
+
+    const findButton = (win, id) => {
+        if (!win || !win.g) return null;
+
+        const buttons = win.g.getElementsByClassName(BUTTON_CLASS);
+
+        for (let i = 0; i < buttons.length; i++) {
+            if (buttons[i].dataset.blazorToolbarId === id) return buttons[i];
+        }
+
+        return null;
+    };
+
+    const resolveIndex = (container, button, customCount) => {
+        if (typeof button.index === "number" && button.index >= 0) {
+            return Math.min(button.index, container.children.length);
+        }
+
+        return Math.min(customCount, container.children.length);
+    };
+
+    const onClick = (componentRef, buttonId) => {
+        if (!componentRef) {
+            return;
+        }
+
+        try {
+            Promise.resolve(
+                WinBoxWindowManager.CallMethodWithParameters(
+                    componentRef,
+                    "OnToolbarButtonClick",
+                    buttonId)
+            ).catch(() => { });
+        } catch (error) { }
+    };
+
+    const createButton = (win, onClickButton, button) => {
+        const container = getIconContainer(win);
+        if (!container) return null;
+
+        const element = document.createElement("span");
+        element.dataset.blazorToolbarId = button.id;
+        element.setAttribute("role", "button");
+
+        element.addEventListener("click", (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+
+            if (element.dataset.blazorToolbarDisabled === "true") return;
+
+            onClickButton(button.id);
+        });
+
+        element.addEventListener("keydown", (event) => {
+            if (event.key !== "Enter" && event.key !== " ") return;
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            if (element.dataset.blazorToolbarDisabled === "true") return;
+
+            onClickButton(button.id);
+        });
+
+        const customCount = container.getElementsByClassName(BUTTON_CLASS).length;
+        const index = resolveIndex(container, button, customCount);
+
+        container.insertBefore(element, container.children[index] || null);
+
+        return element;
+    };
+
+    const upsert = (win, onClickButton, button) => {
+        let element = findButton(win, button.id);
+
+        if (!element) element = createButton(win, onClickButton, button);
+
+        if (element) applyState(element, button);
+    };
+
+    const getControlElement = (win, name) => {
+        const className = CONTROL_CLASS_NAMES[name];
+
+        if (!className || !win || !win.g) return null;
+
+        return win.g.getElementsByClassName(className)[0] || null;
+    };
+
+    const getControlName = (element) => {
+        if (!element || !element.classList) return null;
+
+        return Object.keys(CONTROL_CLASS_NAMES)
+            .filter(name => element.classList.contains(CONTROL_CLASS_NAMES[name]))[0] || null;
+    };
+
+    const applyControl = (win, name, config) => {
+        const element = getControlElement(win, name);
+
+        if (!element) return;
+
+        const previousClasses = (element.dataset.blazorControlClasses || "").split(" ").filter(Boolean);
+        previousClasses.forEach(cssClass => element.classList.remove(cssClass));
+
+        element.dataset.blazorControlClasses = "";
+        element.removeAttribute("style");
+        element.removeAttribute("title");
+        element.classList.remove(HIDDEN_CLASS, DISABLED_CLASS);
+        applyIconClass(element, {});
+
+        win.__blazorControlState = win.__blazorControlState || {};
+        win.__blazorControlState[name] = { disabled: !!(config && config.disabled === true) };
+
+        if (!config) return;
+
+        const classes = (config.cssClass || "").split(/\s+/).filter(Boolean);
+        classes.forEach(cssClass => element.classList.add(cssClass));
+        element.dataset.blazorControlClasses = classes.join(" ");
+
+        if (config.style) element.style.cssText = config.style;
+        if (config.color) element.style.color = config.color;
+        if (config.background) element.style.backgroundColor = config.background;
+
+        if (config.icon) {
+            element.style.backgroundImage = cssUrl(config.icon);
+            element.style.backgroundRepeat = "no-repeat";
+            element.style.backgroundPosition = "center";
+
+            if (config.iconSize) {
+                element.style.backgroundSize = config.iconSize;
+            } else if (!hasBackgroundSize(config.style)) {
+                element.style.backgroundSize = DEFAULT_ICON_SIZE;
+            }
+        } else if (config.iconClass) {
+            element.style.backgroundImage = "none";
+        }
+
+        if (config.tooltip) element.setAttribute("title", config.tooltip);
+        if (config.visible === false) element.classList.add(HIDDEN_CLASS);
+        if (config.disabled === true) element.classList.add(DISABLED_CLASS);
+
+        applyIconClass(element, config);
+    };
+
+    const applyControls = (win, options) => {
+        applyControl(win, "minimize", options.minimize);
+        applyControl(win, "maximize", options.maximize);
+        applyControl(win, "fullscreen", options.fullscreen);
+        applyControl(win, "close", options.close);
+    };
+
+    // Stops clicks on disabled controls in the capture phase, before the built-in handler runs.
+    const blockDisabledControlClick = (win, event) => {
+        const target = event.target;
+
+        if (!target || !target.closest || !win.g) return;
+
+        const control = target.closest(CONTROL_SELECTOR);
+
+        if (!control || !win.g.contains(control)) return;
+
+        const name = getControlName(control);
+        const state = name && win.__blazorControlState ? win.__blazorControlState[name] : null;
+
+        if (!state || !state.disabled) return;
+
+        event.preventDefault();
+        event.stopPropagation();
+    };
+
+    const removeButtons = (win) => {
+        if (!win || !win.g) return;
+
+        const buttons = win.g.getElementsByClassName(BUTTON_CLASS);
+
+        while (buttons.length) {
+            buttons[0].remove();
+        }
+    };
+
+    return {
+        attach: (win, instanceOptions, componentRef) => {
+            if (!win || !win.g) return;
+
+            injectStyles();
+
+            const options = instanceOptions || {};
+            const onClickButton = (buttonId) => onClick(componentRef, buttonId);
+
+            applyControls(win, options);
+
+            const blockedClickHandler = (event) => blockDisabledControlClick(win, event);
+            win.g.addEventListener("click", blockedClickHandler, true);
+            win.__blazorControlClickHandler = blockedClickHandler;
+
+            win.blazorUpdateControlButton = (name, config) => {
+                const key = String(name || "").toLowerCase();
+
+                if (!CONTROL_CLASS_NAMES[key]) return;
+
+                applyControl(win, key, config || null);
+            };
+            win.blazorAddToolbarButton = (button) => {
+                if (button) upsert(win, onClickButton, button);
+            };
+            win.blazorUpdateToolbarButton = (button) => {
+                if (button) upsert(win, onClickButton, button);
+            };
+            win.blazorRemoveToolbarButton = (id) => {
+                const element = findButton(win, id);
+
+                if (element) element.remove();
+            };
+            win.blazorSetToolbarButtons = (buttons) => {
+                removeButtons(win);
+
+                (buttons || []).forEach(button => {
+                    if (button) upsert(win, onClickButton, button);
+                });
+            };
+
+            (options.toolbar || []).forEach(button => {
+                if (button) upsert(win, onClickButton, button);
+            });
+        },
+        detach: (win) => {
+            if (!win || !win.g) return;
+
+            removeButtons(win);
+
+            if (win.__blazorControlClickHandler) {
+                win.g.removeEventListener("click", win.__blazorControlClickHandler, true);
+                win.__blazorControlClickHandler = null;
+            }
+
+            applyControls(win, {});
+
+            delete win.blazorUpdateControlButton;
+            delete win.blazorAddToolbarButton;
+            delete win.blazorUpdateToolbarButton;
+            delete win.blazorRemoveToolbarButton;
+            delete win.blazorSetToolbarButtons;
         }
     };
 })();

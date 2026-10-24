@@ -8,6 +8,7 @@ public class WinBoxWindowManager : IWindowManager
     private readonly IJSRuntime _js;
     private readonly Dictionary<Guid, IJSInProcessObjectReference> _windowsJsReferences;
     private readonly Dictionary<Guid, IWindowReference> _windowsBlzrReferences;
+    private readonly Dictionary<Guid, List<Action<IJSInProcessObjectReference>>> _pendingToolbarActions;
 
 
     public event Action<IWindowReference> OnWindowInstanceAdded;
@@ -18,6 +19,7 @@ public class WinBoxWindowManager : IWindowManager
         _js = js;
         _windowsJsReferences = new Dictionary<Guid, IJSInProcessObjectReference>();
         _windowsBlzrReferences = new Dictionary<Guid, IWindowReference>();
+        _pendingToolbarActions = new Dictionary<Guid, List<Action<IJSInProcessObjectReference>>>();
     }
 
     public IWindowReference Open<TComponent>(string title = null, WindowParameters windowParameters = null, WindowOptions windowOptions = null) where TComponent : ComponentBase
@@ -95,10 +97,13 @@ public class WinBoxWindowManager : IWindowManager
         {
             TryCloseJsWindow(xJsWindowReference);
             await xJsWindowReference.DisposeAsync();
+            _pendingToolbarActions.Remove(xWindowId);
             return;
         }
 
-        _windowsJsReferences[xWindowId] = xJsWindowReference as IJSInProcessObjectReference;
+        IJSInProcessObjectReference xWindowJsReference = xJsWindowReference as IJSInProcessObjectReference;
+        _windowsJsReferences[xWindowId] = xWindowJsReference;
+        FlushPendingToolbarActions(xWindowId, xWindowJsReference);
     }
 
     private static void TryCloseJsWindow(IJSObjectReference jsWindowReference)
@@ -157,6 +162,8 @@ public class WinBoxWindowManager : IWindowManager
         {
             DisposeJsReference(xWindowJsReference);
         }
+
+        _pendingToolbarActions.Remove(winId);
     }
 
     public void Close(Guid winId, WindowResult result)
@@ -181,6 +188,8 @@ public class WinBoxWindowManager : IWindowManager
                 DisposeJsReference(xWindowJsReference);
             }
         }
+
+        _pendingToolbarActions.Remove(winId);
     }
 
     public void Fullscreen(Guid winId, bool? state = null)
@@ -325,5 +334,70 @@ public class WinBoxWindowManager : IWindowManager
         {
             _windowsJsReferences[winId].InvokeVoid("mount", windowContent);
         }
+    }
+
+    public void AddToolbarButton(Guid winId, ToolbarButton button)
+    {
+        InvokeTitleBarAction(winId, xWindowJsReference => xWindowJsReference.InvokeVoid("blazorAddToolbarButton", button));
+    }
+
+    public void UpdateToolbarButton(Guid winId, ToolbarButton button)
+    {
+        InvokeTitleBarAction(winId, xWindowJsReference => xWindowJsReference.InvokeVoid("blazorUpdateToolbarButton", button));
+    }
+
+    public void RemoveToolbarButton(Guid winId, string buttonId)
+    {
+        InvokeTitleBarAction(winId, xWindowJsReference => xWindowJsReference.InvokeVoid("blazorRemoveToolbarButton", buttonId));
+    }
+
+    public void SetToolbarButtons(Guid winId, IEnumerable<ToolbarButton> buttons)
+    {
+        List<ToolbarButton> xButtons = buttons?.ToList() ?? new List<ToolbarButton>();
+        InvokeTitleBarAction(winId, xWindowJsReference => xWindowJsReference.InvokeVoid("blazorSetToolbarButtons", xButtons));
+    }
+
+    public void UpdateControlButton(Guid winId, WindowControlKind kind, WindowControlButton button)
+    {
+        InvokeTitleBarAction(winId, xWindowJsReference => xWindowJsReference.InvokeVoid("blazorUpdateControlButton", kind.ToString(), button));
+    }
+
+    /// <summary>
+    /// Toolbar changes can be requested before the javascript window is created (e.g. right after opening it),
+    /// so they are buffered and applied as soon as the window reference is available.
+    /// </summary>
+    private void InvokeTitleBarAction(Guid winId, Action<IJSInProcessObjectReference> toolbarAction)
+    {
+        if (TryGetJsWindowReference(winId, out IJSInProcessObjectReference xWindowJsReference))
+        {
+            toolbarAction(xWindowJsReference);
+            return;
+        }
+
+        if (!_pendingToolbarActions.TryGetValue(winId, out List<Action<IJSInProcessObjectReference>> xPendingActions))
+        {
+            xPendingActions = new List<Action<IJSInProcessObjectReference>>();
+            _pendingToolbarActions.Add(winId, xPendingActions);
+        }
+
+        xPendingActions.Add(toolbarAction);
+    }
+
+    private void FlushPendingToolbarActions(Guid winId, IJSInProcessObjectReference xWindowJsReference)
+    {
+        if (xWindowJsReference is null || !_pendingToolbarActions.Remove(winId, out List<Action<IJSInProcessObjectReference>> xPendingActions))
+        {
+            return;
+        }
+
+        foreach (Action<IJSInProcessObjectReference> iAction in xPendingActions)
+        {
+            iAction(xWindowJsReference);
+        }
+    }
+
+    private bool TryGetJsWindowReference(Guid winId, out IJSInProcessObjectReference xWindowJsReference)
+    {
+        return _windowsJsReferences.TryGetValue(winId, out xWindowJsReference) && xWindowJsReference is not null;
     }
 }

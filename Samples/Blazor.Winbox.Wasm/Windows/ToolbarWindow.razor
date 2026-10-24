@@ -1,0 +1,164 @@
+﻿<Window>
+    <div class="p-2">
+        <p class="mb-1">Toolbar clicks: @_clicks</p>
+        <p class="mb-3 text-muted">Last action: @_lastAction</p>
+
+        <div class="d-flex flex-wrap gap-2">
+            <button class="btn btn-primary btn-sm" @onclick="AddRuntimeButton">Add runtime button</button>
+            <button class="btn btn-outline-primary btn-sm" @onclick="ToggleInfoButton">Toggle info button</button>
+            <button class="btn btn-outline-danger btn-sm" @onclick="RemoveRuntimeButton">Remove runtime button</button>
+            <button class="btn btn-outline-secondary btn-sm" @onclick="ToggleCloseControl">Toggle close control</button>
+        </div>
+    </div>
+</Window>
+
+@code {
+    private const string RuntimeButtonId = "runtime";
+
+    [CascadingParameter] public WindowInstance WindowInstance { get; set; }
+
+    private int _clicks;
+    private string _lastAction = "none";
+    private bool _runtimeButtonAdded;
+    private bool _infoButtonEnabled = true;
+    private bool _closeControlDisabled;
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (!firstRender) return;
+
+        WindowInstance.SetToolbarButtons(CreateToolbar());
+    }
+
+    private List<ToolbarButton> CreateToolbar()
+    {
+        return new List<ToolbarButton>
+        {
+            new()
+            {
+                Id = "info",
+                Tooltip = "Count a toolbar click",
+                IconClass = "oi oi-info",
+                OnClick = () =>
+                {
+                    _clicks++;
+                    _lastAction = "info";
+                    StateHasChanged();
+                    return Task.CompletedTask;
+                }
+            },
+            new()
+            {
+                Id = "palette",
+                Tooltip = "Random background color",
+                IconClass = "oi oi-droplet",
+                OnClick = () =>
+                {
+                    WindowInstance.SetBackground(GetRandomBackground());
+                    _lastAction = "palette";
+                    StateHasChanged();
+                    return Task.CompletedTask;
+                }
+            },
+            new()
+            {
+                Id = "image-icon",
+                Tooltip = "Button with an image icon",
+                Icon = "./HITIcon.png",
+                IconSize = "18px 18px",
+                OnClick = () =>
+                {
+                    _clicks++;
+                    _lastAction = "image icon";
+                    StateHasChanged();
+                    return Task.CompletedTask;
+                }
+            },
+            new()
+            {
+                Id = "disabled",
+                Tooltip = "This button is disabled",
+                IconClass = "oi oi-ban",
+                Disabled = true
+            }
+        };
+    }
+
+    private void AddRuntimeButton()
+    {
+        if (_runtimeButtonAdded) return;
+
+        _runtimeButtonAdded = true;
+        _lastAction = "runtime button added";
+
+        WindowInstance.AddToolbarButton(new ToolbarButton
+        {
+            Id = RuntimeButtonId,
+            Tooltip = "Runtime button",
+            IconClass = "oi oi-star",
+            Background = "rgba(255, 255, 255, .18)",
+            OnClick = () =>
+            {
+                _clicks++;
+                _lastAction = "runtime";
+                StateHasChanged();
+                return Task.CompletedTask;
+            }
+        });
+
+        StateHasChanged();
+    }
+
+    private void ToggleInfoButton()
+    {
+        _infoButtonEnabled = !_infoButtonEnabled;
+        _lastAction = _infoButtonEnabled ? "info button enabled" : "info button disabled";
+
+        WindowInstance.UpdateToolbarButton(new ToolbarButton
+        {
+            Id = "info",
+            Tooltip = _infoButtonEnabled ? "Count a toolbar click" : "This button is disabled",
+            IconClass = "oi oi-info",
+            Disabled = !_infoButtonEnabled
+        });
+
+        StateHasChanged();
+    }
+
+    private void RemoveRuntimeButton()
+    {
+        if (!_runtimeButtonAdded) return;
+
+        _runtimeButtonAdded = false;
+        _lastAction = "runtime button removed";
+
+        WindowInstance.RemoveToolbarButton(RuntimeButtonId);
+
+        StateHasChanged();
+    }
+
+    private void ToggleCloseControl()
+    {
+        _closeControlDisabled = !_closeControlDisabled;
+        _lastAction = _closeControlDisabled ? "close control disabled" : "close control restored";
+
+        WindowInstance.UpdateControlButton(
+            WindowControlKind.Close,
+            _closeControlDisabled
+                ? new WindowControlButton
+                {
+                    Tooltip = "Close is disabled",
+                    CssClass = "blazor-sample-close-disabled",
+                    Disabled = true
+                }
+                : null);
+
+        StateHasChanged();
+    }
+
+    private static string GetRandomBackground()
+    {
+        Random xRandom = new();
+        return $"rgb({xRandom.Next(0, 256)},{xRandom.Next(0, 256)},{xRandom.Next(0, 256)})";
+    }
+}
