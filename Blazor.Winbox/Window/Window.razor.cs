@@ -24,8 +24,7 @@ public partial class Window : ComponentBase
     {
         if (firstRender)
         {
-            WindowInstance.Options.Mount = _WindowRef;
-            WindowManager.InjectComponentIntoWindow(Title, WindowInstance.Options);
+            WindowManager.InjectComponentIntoWindow(Title, WindowInstance.Options, _WindowRef, WindowInstance.InstanceReference);
         }
     }
 }

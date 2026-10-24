@@ -17,6 +17,11 @@ public partial class WindowInstance : IDisposable
     private DotNetObjectReference<WindowInstance> _InstanceReference;
     private bool _IsDisposed;
 
+    /// <summary>
+    /// Reference that lets javascript call back into this instance.
+    /// </summary>
+    internal DotNetObjectReference<WindowInstance> InstanceReference => _InstanceReference;
+
     protected override void OnInitialized()
     {
         ConfigureInstance();
@@ -33,11 +38,6 @@ public partial class WindowInstance : IDisposable
             return;
         }
         _IsDisposed = true;
-
-        if (Options is not null && ReferenceEquals(Options.BlazorWindowInstanceReference, _InstanceReference))
-        {
-            Options.BlazorWindowInstanceReference = null;
-        }
 
         _InstanceReference?.Dispose();
         _InstanceReference = null;
@@ -68,10 +68,7 @@ public partial class WindowInstance : IDisposable
         SetLeft();
         SetDocking();
         Options.Id = Id.ToString("N");
-        Options.XCloseHandlerName = nameof(OnXClose);
         _InstanceReference = DotNetObjectReference.Create(this);
-        Options.BlazorWindowInstanceReference = _InstanceReference;
-        Options.OnCloseHandlerName = nameof(CloseAsync);
 
         Options.OnMoveHandlerName = nameof(OnMove);
         Options.OnShowHandlerName = nameof(OnShow);
@@ -337,7 +334,6 @@ public partial class WindowInstance : IDisposable
 
     #endregion
 
-    [Obsolete("Do not use this in your code, it is allowed to be used internally by Window")]
     [EditorBrowsable(EditorBrowsableState.Never)]
     [JSInvokable]
     public void OnXClose()

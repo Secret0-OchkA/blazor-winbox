@@ -77,7 +77,7 @@ public class WinBoxWindowManager : IWindowManager
         return new WinBoxWindowReference(Guid.NewGuid());
     }
 
-    public async Task InjectComponentIntoWindow(string title, WindowOptions options)
+    public async Task InjectComponentIntoWindow(string title, WindowOptions options, ElementReference mount, DotNetObjectReference<WindowInstance> windowInstanceReference)
     {
         if (!string.IsNullOrEmpty(title))
         {
@@ -86,7 +86,7 @@ public class WinBoxWindowManager : IWindowManager
         }
         BasicWindowOptions xJsWindowOptions = BasicWindowOptions.CreateCopy(options);
         IJSInProcessRuntime xJsInProcess = (IJSInProcessRuntime)_js;
-        IJSObjectReference xJsWindowReference = await xJsInProcess.InvokeAsync<IJSObjectReference>("WinBoxWindowManager.OpenWindow", title, xJsWindowOptions);
+        IJSObjectReference xJsWindowReference = await xJsInProcess.InvokeAsync<IJSObjectReference>("WinBoxWindowManager.OpenWindow", title, xJsWindowOptions, windowInstanceReference, mount);
         Guid xWindowId = Guid.Parse(options.Id);
 
         // The window may have been closed while the javascript side was creating it,

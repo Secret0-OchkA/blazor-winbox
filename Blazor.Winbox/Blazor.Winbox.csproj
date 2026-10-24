@@ -4,7 +4,7 @@
     <Nullable>disable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <GenerateDocumentationFile>True</GenerateDocumentationFile>
-    <Version>0.2.14-local</Version>
+    <Version>0.2.14</Version>
     <Authors>Tameem Habash</Authors>
     <Company>HIT</Company>
     <Description>Blazor Multiple Windows Library that wraps winbox.js in Blazor components
@@ -12,13 +12,12 @@
     <Title>Blazor Multiple Windows</Title>
     <Copyright>Copyright 2022 </Copyright>
     <PackageIcon>favicon.png</PackageIcon>
-    <PackageReadmeFile>
-    </PackageReadmeFile>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
     <RepositoryUrl>https://github.com/TameemHabash/blazor-winbox</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>blazor multi window multiple windows winbox wasm client side</PackageTags>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
-    <PackageReleaseNotes>Change namespace from  Blazor.Winbox to BlazorWinbox to prevent namespaces overlap in .razor files</PackageReleaseNotes>
+    <PackageReleaseNotes>Removed the obsolete members of BasicWindowOptions (Mount, XCloseHandlerName, OnCloseHandlerName and BlazorWindowInstanceReference). Window internals are no longer part of the public API.</PackageReleaseNotes>
     <RootNamespace>BlazorWinbox</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
@@ -30,6 +29,10 @@
       <PackagePath>\</PackagePath>
     </None>
     <None Include="..\LICENSE">
+      <Pack>True</Pack>
+      <PackagePath>\</PackagePath>
+    </None>
+    <None Include="..\README.md">
       <Pack>True</Pack>
       <PackagePath>\</PackagePath>
     </None>

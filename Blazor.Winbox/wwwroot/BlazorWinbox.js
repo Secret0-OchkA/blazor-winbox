@@ -1,6 +1,6 @@
 ﻿window.WinBoxWindowManager =
 {
-    OpenWindow: (title, windowOptions, componentRef) => {
+    OpenWindow: (title, windowOptions, componentRef, mountElement) => {
 
         let winBoxElement = null;
         let closed = false;
@@ -8,7 +8,7 @@
         const invoke = async (methodName, ...params) => {
             try {
                 return await WinBoxWindowManager
-                    .CallMethodWithParameters(windowOptions.blazorWindowInstanceReference, methodName, ...params);
+                    .CallMethodWithParameters(componentRef, methodName, ...params);
             } catch (error) {
                 // callbacks can still be in flight while the window is closing and blazor
                 // already disposed the window instance, that is not an error worth reporting
@@ -23,10 +23,10 @@
                 // the window is destroyed right after this callback, release everything it holds
                 closed = true;
                 WinBoxDocking.detach(winBoxElement);
-                invoke(windowOptions.xCloseHandlerName);
+                invoke("OnXClose");
                 return false;
             } else {
-                invoke(windowOptions.onCloseHandlerName);
+                invoke("CloseAsync");
                 return true;
             }
         };
@@ -41,6 +41,7 @@
         windowOptions.onmaximize = () => invoke(windowOptions.onMaximizeHandlerName, null);
         windowOptions.onminimize = () => invoke(windowOptions.onMinimizeHandlerName, null);
         windowOptions.onrestore = () => invoke(windowOptions.onRestoreHandlerName);
+        windowOptions.mount = mountElement;
         winBoxElement = new WinBox(windowOptions, title);
 
         if (windowOptions.docking) {

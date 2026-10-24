@@ -1,7 +1,4 @@
-﻿using Microsoft.AspNetCore.Components;
-using Microsoft.JSInterop;
-using System.ComponentModel;
-using System.Reflection;
+﻿using System.Reflection;
 
 namespace BlazorWinbox;
 
@@ -15,12 +12,6 @@ public class BasicWindowOptions : GlobalWindowOptions
     /// query elements by context or just to identify the corresponding window instance. If no ID was set it will automatically create one for you.
     /// </summary>
     public string Id { get; set; }
-    ///// <summary>
-    ///// Mount an element (widget, template, etc.) to the window body.
-    ///// </summary>
-    [Obsolete("Do not use this in your code, it is allowed to be used internally by Window")]
-    [EditorBrowsable(EditorBrowsableState.Never)]
-    public ElementReference Mount { get; set; }
 
     // appearance:
     /// <summary>
@@ -54,18 +45,6 @@ public class BasicWindowOptions : GlobalWindowOptions
     /// </summary>
     public bool? Hidden { get; set; } = false;
 
-    [Obsolete("Do not use this in your code, it is allowed to be used internally by Window")]
-    [EditorBrowsable(EditorBrowsableState.Never)]
-    public string XCloseHandlerName { get; set; }
-
-    [Obsolete("Do not use this in your code, it is allowed to be used internally by Window")]
-    [EditorBrowsable(EditorBrowsableState.Never)]
-    public DotNetObjectReference<WindowInstance> BlazorWindowInstanceReference { get; set; }
-
-    [Obsolete("Do not use this in your code, it is allowed to be used internally by Window")]
-    [EditorBrowsable(EditorBrowsableState.Never)]
-    public string OnCloseHandlerName { get; set; }
-
     public string OnMoveHandlerName { get; set; }
     public string OnShowHandlerName { get; set; }
     public string OnHideHandlerName { get; set; }
@@ -82,13 +61,11 @@ public class BasicWindowOptions : GlobalWindowOptions
         ArgumentNullException.ThrowIfNull(basicWindowOptions, nameof(basicWindowOptions));
 
         BasicWindowOptions xReVal = new();
-        Type xType = typeof(BasicWindowOptions);
-        foreach (PropertyInfo iProp in xType.GetProperties())
+        foreach (PropertyInfo iProp in typeof(BasicWindowOptions).GetProperties())
         {
-            PropertyInfo xPi = xType.GetProperty(iProp.Name);
-            if (xPi is not null && iProp.CanWrite)
+            if (iProp.CanWrite)
             {
-                iProp.SetValue(xReVal, xPi.GetValue(basicWindowOptions, null), null);
+                iProp.SetValue(xReVal, iProp.GetValue(basicWindowOptions, null), null);
             }
         }
 
