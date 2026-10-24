@@ -17,7 +17,7 @@
     <RepositoryType>git</RepositoryType>
     <PackageTags>blazor multi window multiple windows winbox wasm client side</PackageTags>
     <PackageLicenseFile>LICENSE</PackageLicenseFile>
-    <PackageReleaseNotes>Removed the obsolete members of BasicWindowOptions (Mount, XCloseHandlerName, OnCloseHandlerName and BlazorWindowInstanceReference). Window internals are no longer part of the public API.</PackageReleaseNotes>
+    <PackageReleaseNotes>Removed the internal members of BasicWindowOptions (Mount, handler names and the dotnet object reference) so window internals are no longer part of the public API. Added custom window toolbar buttons and customization of the built-in controls (Toolbar, Minimize, Maximize, Fullscreen, Close).</PackageReleaseNotes>
     <RootNamespace>BlazorWinbox</RootNamespace>
   </PropertyGroup>
   <ItemGroup>
